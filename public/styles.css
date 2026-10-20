@@ -187,10 +187,8 @@ button, input, textarea { font: inherit; color: inherit; }
   transition: transform .2s linear;
 }
 .stage-kicker {
-  display: flex; align-items: center; gap: 12px;
   margin: 0 0 6px; font-size: clamp(15px, 1.7vw, 17px); color: var(--teal);
 }
-.stage-kicker::before { content: ""; width: 28px; height: 2px; border-radius: 2px; background: var(--teal); }
 .stage-title { font-size: clamp(36px, 5vw, 52px); line-height: 1.25; margin: 0 0 14px; font-weight: 500; color: #FFFFFF; }
 .stage-sub { margin: 0; max-width: 34ch; font-size: clamp(14px, 1.6vw, 16px); line-height: 1.8; color: rgba(255, 255, 255, .6); }
 .gate-form { margin: 38px 0 0; width: min(380px, 100%); }
