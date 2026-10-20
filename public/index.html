@@ -3,11 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#ffffff">
+  <meta name="theme-color" content="#0D2142">
   <meta name="robots" content="noindex, nofollow">
   <title>نموذج تقييم البرامج القائمة — غراس</title>
   <link rel="icon" type="image/png" href="assets/logo.png">
   <link rel="preload" href="assets/fonts/din-next-arabic.woff2" as="font" type="font/woff2" crossorigin>
+  <script>
+    // تطبيق الوضع المحفوظ قبل الرسم لتجنب الوميض
+    try { var t = localStorage.getItem("gheras-theme"); if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t); } catch (e) {}
+  </script>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -15,122 +19,74 @@
   <!-- الشريط العلوي -->
   <header class="topbar" id="topbar" hidden>
     <div class="topbar-inner">
-      <img class="topbar-logo" src="assets/logo.png" alt="غراس">
+      <img class="topbar-logo logo-color" src="assets/logo.png" alt="غراس">
+      <img class="topbar-logo logo-white" src="assets/logo-white.png" alt="" aria-hidden="true">
       <div class="topbar-title" id="topbarTitle"></div>
-      <div class="topbar-save" id="saveState" aria-live="polite"></div>
+      <div class="topbar-end">
+        <span class="topbar-save" id="saveState" aria-live="polite"></span>
+        <button class="tt" id="themeToggle" type="button" aria-label="الوضع الليلي" aria-pressed="false">
+          <span class="tt-hole" aria-hidden="true"></span>
+          <svg class="tt-man" viewBox="0 0 12 22" aria-hidden="true">
+            <circle cx="6" cy="3.2" r="2.6"/>
+            <path class="tt-body" d="M6 6v7.5"/>
+            <path class="tt-arm" d="M6 8.5 3 11.5M6 8.5l3 3"/>
+            <path class="tt-leg tt-leg-a" d="M6 13.5 3.6 20"/>
+            <path class="tt-leg tt-leg-b" d="M6 13.5 8.4 20"/>
+          </svg>
+          <span class="tt-knob" aria-hidden="true">
+            <svg class="tt-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.6"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5.3 5.3 7 7M17 17l1.7 1.7M5.3 18.7 7 17M17 7l1.7-1.7"/></svg>
+            <svg class="tt-moon" viewBox="0 0 24 24"><path d="M20 14.6A8.2 8.2 0 0 1 9.4 4a8.2 8.2 0 1 0 10.6 10.6Z"/></svg>
+          </span>
+        </button>
+      </div>
     </div>
-    <div class="progress" id="progress" aria-hidden="true"></div>
+    <div class="progress" aria-hidden="true"><span id="progressFill"></span></div>
   </header>
 
   <main id="app">
 
-    <!-- ١) شاشة الدخول -->
-    <section class="screen gate" id="screenGate">
-      <div class="gate-glow" aria-hidden="true"></div>
-      <div class="gate-inner reveal">
-        <img class="gate-logo" src="assets/logo.png" alt="جمعية غراس لتنمية الطفل">
-        <p class="eyebrow">منهجية إدارة المبادرات ومتابعتها وقياس أثرها</p>
-        <h1 class="display">نموذج تقييم<br>البرامج القائمة</h1>
-        <p class="lede">تشخيص كل برنامج بلغة المنهجية نفسها،<br class="br-wide">تمهيدا لخطة التحسين والتطوير.</p>
-
+    <!-- الدخول -->
+    <section class="screen stage" id="screenGate">
+      <div class="stage-pattern" aria-hidden="true"></div>
+      <div class="stage-light" aria-hidden="true"></div>
+      <div class="stage-inner">
+        <div class="stage-logo">
+          <span class="halo" aria-hidden="true"></span>
+          <img src="assets/logo-white.png" alt="جمعية غراس لتنمية الطفل">
+        </div>
+        <h1 class="stage-title">نموذج تقييم<br>البرامج القائمة</h1>
+        <p class="stage-sub">منهجية إدارة المبادرات ومتابعتها وقياس أثرها</p>
         <form class="gate-form" id="gateForm" autocomplete="off" novalidate>
           <label class="sr-only" for="accessCode">رمز الدخول</label>
-          <div class="pill-input">
-            <input id="accessCode" type="password" inputmode="text" placeholder="رمز الدخول" required>
-            <button type="submit" class="pill-btn" aria-label="دخول">
+          <div class="code-well">
+            <input id="accessCode" type="password" placeholder="رمز الدخول" required>
+            <button type="submit" class="code-go" aria-label="دخول">
               <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
           </div>
           <p class="form-msg" id="gateMsg" role="alert"></p>
         </form>
       </div>
-      <div class="gate-art" aria-hidden="true">
-        <svg viewBox="0 0 400 220" class="chevrons">
-          <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="14">
-            <path class="c1" d="M140 40 L200 80 L260 40" stroke="#A9CF45"/>
-            <path class="c2" d="M110 80 L200 140 L290 80" stroke="#6CBD53"/>
-            <path class="c3" d="M80 120 L200 200 L320 120" stroke="#27B5C1"/>
-          </g>
-        </svg>
-      </div>
     </section>
 
-    <!-- ٢) التمهيد -->
-    <section class="screen intro" id="screenIntro" hidden>
-      <div class="hero">
-        <p class="eyebrow reveal">جمعية غراس لتنمية الطفل</p>
-        <h1 class="display reveal">تحليل،<br><span class="grad">لا محاسبة.</span></h1>
-        <p class="lede reveal">الغرض كما تنص المنهجية: معرفة ما حدث ولماذا، لا البحث عن المقصر.</p>
-        <div class="hero-meta reveal">
-          <span>٧ محاور</span><span class="dot"></span><span>٣٨ سؤالا</span><span class="dot"></span><span>نحو ١٥ دقيقة</span>
-        </div>
-      </div>
-
-      <div class="wrap">
-        <article class="prose reveal">
-          <p>الحمد لله رب العالمين وصلى الله وسلم على نبينا محمد وبعد:</p>
-          <p>فمن مخرجات مشروع (آفاق) صاحب الأثر الكبير جاءت مبادرة (منهجية إدارة المبادرات ومتابعتها وقياس أثرها) من إعداد المستشار باسل الرشود لتقود المبادرة في الجمعية من الفكرة إلى قياس أثرها بلغة واحدة ونماذج عملية وتنقل إدارتها (من نمط قائم على النشاط إلى نمط قائم على الأثر يتمحور حول المستفيد)</p>
-          <p>وتفعيلا لهذه المنهجية أعددنا (نموذج تقييم البرامج القائمة) تسهيلا لبدء خطة التحسين والتطوير المبنية كذلك على منهجية إدارة المبادرات ومتابعتها وهذا النموذج أولى خطواتها</p>
-        </article>
-
-        <div class="tiles">
-          <div class="tile reveal">
-            <span class="tile-k">موقع النموذج</span>
-            <h3>تشخيص الواقع الحالي</h3>
-            <p>ينقل تشخيص المحطة الأولى من مستوى الجمعية إلى مستوى كل برنامج فيحوله إلى بيانات قابلة للمقارنة.</p>
-          </div>
-          <div class="tile reveal">
-            <span class="tile-k">موقع النموذج</span>
-            <h3>ترحيل البيانات السابقة</h3>
-            <p>يرصد البرامج القائمة بلغة المنهجية نفسها فيمهد لترحيلها وتمييزها بأنها (مرحلة) وفق المحطة السابعة.</p>
-          </div>
-        </div>
-
-        <div class="flow reveal" aria-label="تسلسل المحاور">
-          <span>الاحتياج والقيم</span><i></i>
-          <span>تصميم المبادرة</span><i></i>
-          <span>إدارة المبادرة</span><i></i>
-          <span>متابعة المبادرة</span><i></i>
-          <span>السلامة وحماية الطفل</span><i></i>
-          <span>قياس الأثر</span><i></i>
-          <span>التطوير المستمر</span>
-        </div>
-
-        <section class="rules reveal">
-          <h2 class="h2">ضوابط عامة</h2>
-          <dl>
-            <div><dt>وحدة التقييم</dt><dd>يعبأ النموذج لكل برنامج قائم عن آخر دورة منفذة منه وتعامل الدورة معاملة (المبادرة) في المنهجية.</dd></div>
-            <div><dt>المعبئ</dt><dd>مدير المبادرة ويراجعه قسم المتابعة وقياس الأثر في الزيارة الميدانية بالتحقق من عينة من الشواهد.</dd></div>
-            <div><dt>الإجابة</dt><dd>يختار الوصف الأقرب لواقع المبادرة كما هو لا كما ينبغي أن يكون.</dd></div>
-            <div><dt>الشاهد</dt><dd>يطلب الشاهد / الدليل عند اختيار (أ) ولكل سؤال خيار (لا ينطبق) مع ذكر السبب.</dd></div>
-            <div><dt>الحجم</dt><dd>ما ورد فيه (للكبيرة) أو (للصغيرة) يجاب عنه بحسب حجم المبادرة.</dd></div>
-            <div><dt>البرامج الجديدة</dt><dd>إن لم تسبق للبرنامج دورة منتهية يختار (لا ينطبق) في أسئلة الإغلاق والقياس اللاحق والتقرير الختامي والتطوير.</dd></div>
-          </dl>
-        </section>
-
-        <div class="cta-row reveal">
-          <button class="btn btn-primary btn-lg" id="startBtn" type="button">ابدأ التقييم</button>
-          <p class="fine">تحفظ إجاباتك تلقائيا على جهازك كمسودة حتى ترسلها.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- ٣) خطوات النموذج -->
+    <!-- خطوات النموذج -->
     <section class="screen steps" id="screenSteps" hidden>
       <div id="stepHost"></div>
     </section>
 
-    <!-- ٤) تم الإرسال -->
-    <section class="screen done" id="screenDone" hidden>
-      <div class="done-inner">
+    <!-- الخاتمة -->
+    <section class="screen stage" id="screenDone" hidden>
+      <div class="stage-pattern" aria-hidden="true"></div>
+      <div class="stage-light" aria-hidden="true"></div>
+      <div class="stage-inner">
         <svg class="done-mark" viewBox="0 0 120 120" aria-hidden="true">
-          <circle cx="60" cy="60" r="54" fill="none" stroke="#6CBD53" stroke-width="6"/>
-          <path d="M38 62 L54 78 L84 46" fill="none" stroke="#6CBD53" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="60" cy="60" r="54" fill="none" stroke-width="5"/>
+          <path d="M38 62 L54 78 L84 46" fill="none" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <h1 class="display-sm">وصل التقييم.<br>شكرا لك.</h1>
-        <p class="lede">سيراجعه قسم المتابعة وقياس الأثر ويتواصل معك عند الزيارة الميدانية.</p>
+        <h1 class="stage-title">وصل التقييم<br>شكرا لك</h1>
+        <p class="stage-sub">سيراجعه قسم المتابعة وقياس الأثر عند الزيارة الميدانية</p>
         <p class="ref" id="doneRef"></p>
-        <button class="btn btn-ghost" id="newBtn" type="button">تقييم برنامج آخر</button>
+        <button class="btn btn-onstage" id="newBtn" type="button">تقييم برنامج آخر</button>
       </div>
     </section>
   </main>
@@ -155,9 +111,8 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <footer class="footer">
+  <footer class="footer" id="footer">
     <div class="footer-inner">
-      <img src="assets/logo.png" alt="غراس" class="footer-logo">
       <div class="footer-text">
         <strong>جمعية غراس لتنمية الطفل</strong>
         <span>المملكة العربية السعودية — جمعية مسجلة بالمركز الوطني لتنمية القطاع غير الربحي، ترخيص رقم: ١١٩٨</span>

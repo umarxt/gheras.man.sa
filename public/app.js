@@ -60,23 +60,89 @@
   }
 
   function show(id) {
-    ["screenGate", "screenIntro", "screenSteps", "screenDone"].forEach((s) => ($("#" + s).hidden = s !== id));
+    ["screenGate", "screenSteps", "screenDone"].forEach((s) => ($("#" + s).hidden = s !== id));
     const inForm = id === "screenSteps";
-    $("#topbar").hidden = id === "screenGate";
+    $("#topbar").hidden = !inForm;
     $("#dock").hidden = !inForm;
-    document.body.classList.toggle("gate-mode", !inForm);
+    document.body.classList.toggle("stage-mode", !inForm);
+    document.querySelector('meta[name="theme-color"]').content = inForm ? getComputedStyle(document.body).backgroundColor : "#0D2142";
     window.scrollTo(0, 0);
-    observeReveals();
+    stageLight(inForm ? null : $("#" + id));
   }
 
-  let io = null;
-  function observeReveals() {
-    const els = $$(".reveal:not(.in)");
-    if (!("IntersectionObserver" in window)) { els.forEach((e) => e.classList.add("in")); return; }
-    io = io || new IntersectionObserver((entries) => {
-      entries.forEach((en) => { if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); } });
-    }, { threshold: 0.12 });
-    els.forEach((e, i) => { e.style.transitionDelay = Math.min(i, 4) * 70 + "ms"; io.observe(e); });
+  // ——— الإضاءة التي تتبع المؤشر في شاشتي الدخول والخاتمة ———
+  let light = null;
+  function stageLight(el) {
+    if (light) { cancelAnimationFrame(light.raf); light = null; }
+    if (!el) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const r = el.getBoundingClientRect();
+    light = { el, x: r.width / 2, y: r.height * 0.3, tx: r.width / 2, ty: r.height * 0.3, last: 0, raf: 0, t0: performance.now() };
+    const logo = $(".stage-logo", el);
+    const tick = (now) => {
+      if (!light || light.el !== el) return;
+      const rect = el.getBoundingClientRect();
+      if (now - light.last > 2600 && !reduce) { // لا مؤشر: تتجول الإضاءة ببطء حول الشعار
+        const t = (now - light.t0) / 1000;
+        light.tx = rect.width / 2 + Math.sin(t * 0.45) * Math.min(260, rect.width * 0.32);
+        light.ty = rect.height * 0.3 + Math.sin(t * 0.7) * 90;
+      }
+      light.x += (light.tx - light.x) * 0.08;
+      light.y += (light.ty - light.y) * 0.08;
+      el.style.setProperty("--mx", light.x.toFixed(1) + "px");
+      el.style.setProperty("--my", light.y.toFixed(1) + "px");
+      if (logo) {
+        const lr = logo.getBoundingClientRect();
+        const cx = lr.left - rect.left + lr.width / 2, cy = lr.top - rect.top + lr.height / 2;
+        const dx = light.x - cx, dy = light.y - cy, d = Math.hypot(dx, dy) || 1, k = Math.min(1, d / 300) * 26;
+        logo.style.setProperty("--hx", ((dx / d) * k).toFixed(1) + "px");
+        logo.style.setProperty("--hy", ((dy / d) * k).toFixed(1) + "px");
+      }
+      light.raf = requestAnimationFrame(tick);
+    };
+    light.raf = requestAnimationFrame(tick);
+  }
+  function onPointer(e) {
+    if (!light) return;
+    const rect = light.el.getBoundingClientRect();
+    light.tx = e.clientX - rect.left;
+    light.ty = e.clientY - rect.top;
+    light.last = performance.now();
+  }
+
+  // ——— الوضع الليلي والنهاري ———
+  const THEME_KEY = "gheras-theme";
+  const darkMQ = window.matchMedia("(prefers-color-scheme: dark)");
+  const currentTheme = () => document.documentElement.getAttribute("data-theme") || (darkMQ.matches ? "dark" : "light");
+  let ttBusy = false;
+  function setTheme(t) {
+    document.documentElement.setAttribute("data-theme", t);
+    storage((ls) => ls.setItem(THEME_KEY, t));
+    const b = $("#themeToggle");
+    b.dataset.state = t;
+    b.setAttribute("aria-pressed", t === "dark" ? "true" : "false");
+    b.setAttribute("aria-label", t === "dark" ? "التبديل إلى الوضع النهاري" : "التبديل إلى الوضع الليلي");
+    if (!$("#topbar").hidden) document.querySelector('meta[name="theme-color"]').content = t === "dark" ? "#0B1424" : "#EEF1F6";
+  }
+  function toggleTheme() {
+    if (ttBusy) return;
+    const b = $("#themeToggle"), man = $(".tt-man", b);
+    const to = currentTheme() === "dark" ? "light" : "dark";
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { setTheme(to); return; }
+    ttBusy = true;
+    const at = (ms, fn) => setTimeout(fn, ms);
+    if (to === "light") { // يمشي الرجل إلى الحفرة ويسقط، ثم تشرق الشمس فوقها
+      man.className.baseVal = "tt-man walk";
+      at(700, () => { man.className.baseVal = "tt-man sink"; });
+      at(1000, () => { man.className.baseVal = "tt-man"; setTheme("light"); });
+      at(1500, () => { ttBusy = false; });
+    } else { // يغيب الضوء فيخرج الرجل من الحفرة ويعود إلى مكانه
+      man.className.baseVal = "tt-man sink";
+      setTheme("dark");
+      at(520, () => { man.className.baseVal = "tt-man pop"; });
+      at(800, () => { man.className.baseVal = "tt-man back"; });
+      at(1520, () => { man.className.baseVal = "tt-man"; ttBusy = false; });
+    }
   }
 
   async function api(payload) {
@@ -95,7 +161,7 @@
     const msg = $("#gateMsg");
     if (!val) { msg.textContent = "أدخل رمز الدخول"; input.focus(); return; }
     msg.textContent = "";
-    const btn = $(".pill-btn");
+    const btn = $(".code-go");
     btn.disabled = true;
     try {
       if (configured()) {
@@ -106,7 +172,7 @@
       }
       code = val;
       storage((ls) => ls.setItem(CODE_KEY, val));
-      enterIntro();
+      enterForm();
     } catch (err) {
       msg.textContent = err.message === "bad" || err.message === "رمز الدخول غير صحيح" ? "رمز الدخول غير صحيح" : "تعذر التحقق، تأكد من الاتصال وحاول مرة أخرى";
       const g = $("#screenGate");
@@ -114,25 +180,18 @@
     } finally { btn.disabled = false; }
   }
 
-  function enterIntro() {
+  function enterForm() {
     const draft = loadDraft();
-    if (draft && draft.answers && (Object.keys(draft.answers).length || (draft.data && draft.data.program))) {
-      state = { ...freshState(), ...draft };
-      show("screenSteps");
-      renderStep();
-      toast("استعدنا مسودتك من حيث توقفت");
-      return;
-    }
-    $("#topbarTitle").textContent = "نموذج تقييم البرامج القائمة";
-    renderProgress(-1);
-    show("screenIntro");
+    const restore = draft && draft.answers && (Object.keys(draft.answers).length || (draft.data && draft.data.program));
+    state = restore ? { ...freshState(), ...draft } : freshState();
+    show("screenSteps");
+    renderStep();
+    if (restore) toast("استعدنا مسودتك من حيث توقفت");
   }
 
   // ——— الشريط والتقدم ———
   function renderProgress(cur) {
-    const p = $("#progress");
-    p.innerHTML = Array.from({ length: STEP_COUNT }, (_, i) =>
-      `<span class="${i < cur ? "done" : i === cur ? "cur" : ""}"></span>`).join("");
+    $("#progressFill").style.width = Math.max(0, Math.min(1, (cur + 1) / STEP_COUNT)) * 100 + "%";
   }
 
   function stepTitle(i) {
@@ -209,12 +268,13 @@
 
   function tplData() {
     const d = state.data;
-    return `<div>
+    return `<div class="wrap">
       <div class="step-hero"><div>
         <p class="eyebrow">قبل المحاور</p>
         <h1>بيانات المبادرة</h1>
-        <p>عن آخر دورة منفذة من البرنامج.</p>
+        <p class="lead">عن آخر دورة منفذة من البرنامج</p>
       </div></div>
+      <div class="band" aria-hidden="true"></div>
       <div class="step-body">
         <div class="card"><h2 class="card-title">البرنامج والدورة</h2>
           <div class="grid">
@@ -293,23 +353,28 @@
   function sizeIcon(n) {
     const c = ["#A9CF45", "#6CBD53", "#27B5C1"];
     return `<svg class="size-ico" viewBox="0 0 34 34" aria-hidden="true">${Array.from({ length: 3 }, (_, i) =>
-      `<rect x="${4 + i * 10}" y="${22 - i * 7}" width="7" height="${8 + i * 7}" rx="3.5" fill="${i < n ? c[i] : "#e8e8ed"}"/>`).join("")}</svg>`;
+      `<rect x="${4 + i * 10}" y="${22 - i * 7}" width="7" height="${8 + i * 7}" rx="3.5" fill="${i < n ? c[i] : "var(--line)"}"/>`).join("")}</svg>`;
   }
 
   // المحاور
   function tplAxis(a) {
-    return `<div>
+    return `<div class="wrap">
       <div class="step-hero">
         <div>
-          <p class="eyebrow">المحور ${ORD[a.n]}</p>
+          <p class="eyebrow">المحور ${ORD[a.n]} من ${ORD[AXES.length]}</p>
           <h1>${esc(a.title)}</h1>
-          <p>${esc(a.lead)}</p>
+          <p class="lead">${esc(a.lead)}</p>
+          <nav class="qmap" aria-label="أسئلة المحور">${a.questions.map((q) => {
+            const id = qid(a, q);
+            return `<button type="button" data-jump="${id}" class="${state.answers[id] ? "done" : ""}" aria-label="السؤال ${qLabel(a, q)}">${toAr(q.n)}</button>`;
+          }).join("")}</nav>
         </div>
-        <div class="axis-num ${a.safety ? "safety" : ""}" aria-hidden="true">${toAr(a.n)}</div>
+        <div class="axis-num" aria-hidden="true">${toAr(a.n)}</div>
       </div>
+      <div class="band" aria-hidden="true"></div>
       <div class="step-body">
-        ${a.safety ? `<div class="safety-banner">
-          <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5 4 5.5v6c0 5 3.4 9 8 10.5 4.6-1.5 8-5.5 8-10.5v-6l-8-3Z" fill="none" stroke="#27B5C1" stroke-width="2" stroke-linejoin="round"/><path d="m8.5 12 2.5 2.5 4.5-5" fill="none" stroke="#27B5C1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        ${a.safety ? `<div class="safety-note">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.5 4 5.5v6c0 5 3.4 9 8 10.5 4.6-1.5 8-5.5 8-10.5v-6l-8-3Z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>
           <span>أسئلة هذا المحور تتابعها الإدارة بعناية خاصة. اختر الوصف الأقرب للواقع كما هو.</span></div>` : ""}
         ${a.questions.map((q) => tplQuestion(a, q)).join("")}
       </div>
@@ -389,12 +454,13 @@
 
   function tplReview() {
     const d = state.data;
-    return `<div>
+    return `<div class="wrap">
       <div class="step-hero"><div>
         <p class="eyebrow">الخطوة الأخيرة</p>
-        <h1>راجع، ثم أرسل.</h1>
-        <p>${esc(d.program || "")}${d.season ? " — " + esc(d.season) : ""}${d.size ? " · مبادرة " + esc(d.size) : ""}</p>
+        <h1>المراجعة والإرسال</h1>
+        <p class="lead">${esc(d.program || "")}${d.season ? " — " + esc(d.season) : ""}${d.size ? " · مبادرة " + esc(d.size) : ""}</p>
       </div></div>
+      <div class="band" aria-hidden="true"></div>
       <div class="step-body">
         <div class="review-grid">
           <button type="button" class="review-row" data-goto="0">
@@ -414,7 +480,7 @@
               <textarea class="textarea" id="openBad" data-open="bad">${esc(state.open.bad)}</textarea></div>
           </div>
         </div>
-        <p class="fine" style="text-align:center">بالإرسال تنتقل الإجابات والشواهد إلى قسم المتابعة وقياس الأثر وتحذف المسودة من جهازك.</p>
+        <p class="fine">بالإرسال تنتقل الإجابات والشواهد إلى قسم المتابعة وقياس الأثر وتحذف المسودة من جهازك.</p>
       </div>
     </div>`;
   }
@@ -456,6 +522,7 @@
       const id = qid(a, q);
       const p = questionProblem(id);
       $(`#q_${id}`).classList.toggle("missing", !!p);
+      const dot = $(`[data-jump="${id}"]`); if (dot) dot.classList.toggle("bad", !!p);
       if (p && !first) { first = $(`#q_${id}`); firstMsg = p; }
     });
     if (first) { first.scrollIntoView({ behavior: "smooth", block: "start" }); toast(firstMsg); }
@@ -540,7 +607,7 @@
       state = freshState();
       setTimeout(() => {
         overlay(false);
-        $("#doneRef").textContent = r.id ? `رقم المرجع: ${r.id}` : "";
+        $("#doneRef").innerHTML = r.id ? `رقم المرجع: <bdi dir="ltr">${esc(r.id)}</bdi>` : "";
         $("#topbarTitle").textContent = "تم الإرسال";
         renderProgress(STEP_COUNT);
         show("screenDone");
@@ -566,7 +633,9 @@
       $('[data-extra="na"]', sec).classList.toggle("open", t.value === "NA");
       const tag = $(".auto-tag", sec); if (tag) tag.remove();
       sec.classList.remove("missing");
+      const dot = $(`[data-jump="${id}"]`); if (dot) dot.classList.add("done"), dot.classList.remove("bad");
       if (t.value === "NA") setTimeout(() => $(`[data-reason="${id}"]`).focus({ preventScroll: true }), 250);
+      else if (t.value !== "أ") advanceFrom(id);
       updateDock();
       saveDraft();
       return;
@@ -587,6 +656,21 @@
     if (t.matches("[data-file]")) { addFiles(t.dataset.file, t.files); t.value = ""; }
   }
 
+  // بعد الإجابة ينتقل بهدوء إلى السؤال التالي غير المجاب
+  let advTimer = null;
+  function advanceFrom(id) {
+    clearTimeout(advTimer);
+    if (!e_prefersMotion()) return;
+    const all = $$("[data-q]").map((el) => el.dataset.q);
+    const nextId = all.slice(all.indexOf(id) + 1).find((x) => !state.answers[x]);
+    if (!nextId) return;
+    advTimer = setTimeout(() => {
+      const el = $(`#q_${nextId}`);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 420);
+  }
+  const e_prefersMotion = () => !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
   function onInput(e) {
     const t = e.target;
     if (t.dataset.field) {
@@ -606,6 +690,8 @@
     if (rm) { files[rm.dataset.rmfile].splice(+rm.dataset.idx, 1); renderFiles(rm.dataset.rmfile); return; }
     const g = e.target.closest("[data-goto]");
     if (g) { go(+g.dataset.goto); return; }
+    const j = e.target.closest("[data-jump]");
+    if (j) { $(`#q_${j.dataset.jump}`).scrollIntoView({ behavior: "smooth", block: "center" }); return; }
   }
 
   function bindDrops() {
@@ -627,10 +713,14 @@
 
   function init() {
     $("#gateForm").addEventListener("submit", handleGate);
-    $("#startBtn").addEventListener("click", () => { state = freshState(); show("screenSteps"); renderStep(); });
+    $("#themeToggle").addEventListener("click", toggleTheme);
+    const tb = $("#themeToggle"); tb.dataset.state = currentTheme(); tb.setAttribute("aria-pressed", currentTheme() === "dark" ? "true" : "false");
+    darkMQ.addEventListener && darkMQ.addEventListener("change", () => { if (!storage((ls) => ls.getItem(THEME_KEY))) tb.dataset.state = currentTheme(); });
+    window.addEventListener("pointermove", onPointer, { passive: true });
+    window.addEventListener("pointerdown", onPointer, { passive: true });
     $("#prevBtn").addEventListener("click", () => go(state.step - 1));
     $("#nextBtn").addEventListener("click", next);
-    $("#newBtn").addEventListener("click", () => { $("#topbarTitle").textContent = "نموذج تقييم البرامج القائمة"; renderProgress(-1); show("screenIntro"); });
+    $("#newBtn").addEventListener("click", () => { state = freshState(); show("screenSteps"); renderStep(); });
     const host = $("#stepHost");
     host.addEventListener("change", onChange);
     host.addEventListener("input", onInput);
