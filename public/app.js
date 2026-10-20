@@ -1,0 +1,648 @@
+/* نموذج تقييم البرامج القائمة — منطق الواجهة
+   لا يخزن شيء على الخادم هنا؛ كل الإرسال يذهب إلى Google Apps Script ثم قوقل شيتس.
+   المسودة فقط تحفظ في جهاز المعبئ (localStorage) وتحذف بعد الإرسال. */
+(function () {
+  "use strict";
+
+  const CFG = window.GHERAS_CONFIG || {};
+  const FORM = window.GHERAS_FORM;
+  const AXES = FORM.axes;
+  const LETTERS = ["أ", "ب", "ج", "د"];
+  const ORD = ["", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس", "السابع"];
+  const DRAFT_KEY = "gheras-eval-draft-v1";
+  const CODE_KEY = "gheras-eval-code";
+  const STEP_COUNT = AXES.length + 2; // بيانات + ٧ محاور + مراجعة
+  const NEW_PROGRAM_REASON = "برنامج جديد لم تسبق له دورة منتهية";
+
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+  const toAr = (v) => String(v).replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[d]);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const qid = (a, q) => `a${a.n}q${q.n}`;
+  const qLabel = (a, q) => `${toAr(q.n)}-${toAr(a.n)}`;
+
+  // ——— الحالة ———
+  let state = freshState();
+  const files = {}; // qid → File[] (في الذاكرة فقط)
+  let code = "";
+  let saveTimer = null;
+
+  function freshState() {
+    return { data: {}, answers: {}, open: { good: "", bad: "" }, step: 0, startedAt: new Date().toISOString() };
+  }
+
+  function storage(fn) { try { return fn(window.localStorage); } catch (e) { return null; } }
+
+  function saveDraft() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      const ok = storage((ls) => { ls.setItem(DRAFT_KEY, JSON.stringify({ ...state, savedAt: Date.now() })); return true; });
+      const el = $("#saveState");
+      if (ok) { el.textContent = "حفظت المسودة"; el.style.opacity = 1; setTimeout(() => (el.style.opacity = 0), 1600); }
+    }, 350);
+  }
+
+  function loadDraft() {
+    const raw = storage((ls) => ls.getItem(DRAFT_KEY));
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch (e) { return null; }
+  }
+
+  function clearDraft() { clearTimeout(saveTimer); storage((ls) => ls.removeItem(DRAFT_KEY)); }
+
+  // ——— أدوات ———
+  function toast(msg, ms = 2600) {
+    const t = $("#toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(t._h);
+    t._h = setTimeout(() => t.classList.remove("show"), ms);
+  }
+
+  function show(id) {
+    ["screenGate", "screenIntro", "screenSteps", "screenDone"].forEach((s) => ($("#" + s).hidden = s !== id));
+    const inForm = id === "screenSteps";
+    $("#topbar").hidden = id === "screenGate";
+    $("#dock").hidden = !inForm;
+    document.body.classList.toggle("gate-mode", !inForm);
+    window.scrollTo(0, 0);
+    observeReveals();
+  }
+
+  let io = null;
+  function observeReveals() {
+    const els = $$(".reveal:not(.in)");
+    if (!("IntersectionObserver" in window)) { els.forEach((e) => e.classList.add("in")); return; }
+    io = io || new IntersectionObserver((entries) => {
+      entries.forEach((en) => { if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); } });
+    }, { threshold: 0.12 });
+    els.forEach((e, i) => { e.style.transitionDelay = Math.min(i, 4) * 70 + "ms"; io.observe(e); });
+  }
+
+  async function api(payload) {
+    const res = await fetch(CFG.APPS_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return res.json();
+  }
+
+  const configured = () => /^https:\/\/script\.google\.com\//.test(CFG.APPS_SCRIPT_URL || "");
+
+  // ——— الدخول ———
+  async function handleGate(e) {
+    e.preventDefault();
+    const input = $("#accessCode");
+    const val = input.value.trim();
+    const msg = $("#gateMsg");
+    if (!val) { msg.textContent = "أدخل رمز الدخول"; input.focus(); return; }
+    msg.textContent = "";
+    const btn = $(".pill-btn");
+    btn.disabled = true;
+    try {
+      if (configured()) {
+        const r = await api({ action: "verify", code: val });
+        if (!r.ok) throw new Error(r.error || "bad");
+      } else {
+        toast("وضع المعاينة: لم يضبط رابط قوقل بعد");
+      }
+      code = val;
+      storage((ls) => ls.setItem(CODE_KEY, val));
+      enterIntro();
+    } catch (err) {
+      msg.textContent = err.message === "bad" || err.message === "رمز الدخول غير صحيح" ? "رمز الدخول غير صحيح" : "تعذر التحقق، تأكد من الاتصال وحاول مرة أخرى";
+      const g = $("#screenGate");
+      g.classList.remove("shake"); void g.offsetWidth; g.classList.add("shake");
+    } finally { btn.disabled = false; }
+  }
+
+  function enterIntro() {
+    const draft = loadDraft();
+    if (draft && draft.answers && (Object.keys(draft.answers).length || (draft.data && draft.data.program))) {
+      state = { ...freshState(), ...draft };
+      show("screenSteps");
+      renderStep();
+      toast("استعدنا مسودتك من حيث توقفت");
+      return;
+    }
+    $("#topbarTitle").textContent = "نموذج تقييم البرامج القائمة";
+    renderProgress(-1);
+    show("screenIntro");
+  }
+
+  // ——— الشريط والتقدم ———
+  function renderProgress(cur) {
+    const p = $("#progress");
+    p.innerHTML = Array.from({ length: STEP_COUNT }, (_, i) =>
+      `<span class="${i < cur ? "done" : i === cur ? "cur" : ""}"></span>`).join("");
+  }
+
+  function stepTitle(i) {
+    if (i === 0) return "بيانات المبادرة";
+    if (i <= AXES.length) return `المحور ${ORD[i]}: ${AXES[i - 1].title}`;
+    return "المراجعة والإرسال";
+  }
+
+  // ——— قواعد الحجم والبرامج الجديدة ———
+  function applyRules() {
+    const size = state.data.size;
+    const isNew = state.data.hasPrev === "لا";
+    AXES.forEach((a) => a.questions.forEach((q) => {
+      const id = qid(a, q);
+      const cur = state.answers[id];
+      if (q.smallNA) {
+        if (size === "صغيرة") state.answers[id] = { c: "NA", reason: q.smallNA, auto: true, locked: true };
+        else if (cur && cur.locked) delete state.answers[id];
+      }
+      if (q.newProgramNA && !(state.answers[id] && state.answers[id].locked)) {
+        const c2 = state.answers[id];
+        if (isNew && !c2) state.answers[id] = { c: "NA", reason: NEW_PROGRAM_REASON, auto: true };
+        else if (!isNew && c2 && c2.auto && c2.reason === NEW_PROGRAM_REASON) delete state.answers[id];
+      }
+    }));
+  }
+
+  // ——— رسم الخطوات ———
+  function renderStep() {
+    const i = state.step;
+    const host = $("#stepHost");
+    host.innerHTML = i === 0 ? tplData() : i <= AXES.length ? tplAxis(AXES[i - 1]) : tplReview();
+    host.firstElementChild.classList.add("step");
+    $("#topbarTitle").textContent = stepTitle(i);
+    renderProgress(i);
+    $("#prevBtn").style.visibility = i === 0 ? "hidden" : "visible";
+    $("#nextBtn").textContent = i === STEP_COUNT - 1 ? "إرسال التقييم" : "التالي";
+    updateDock();
+    if (i > 0 && i <= AXES.length) AXES[i - 1].questions.forEach((q) => renderFiles(qid(AXES[i - 1], q)));
+    window.scrollTo({ top: 0 });
+  }
+
+  function updateDock() {
+    const i = state.step;
+    let txt = `${toAr(i + 1)} من ${toAr(STEP_COUNT)}`;
+    if (i > 0 && i <= AXES.length) {
+      const a = AXES[i - 1];
+      const done = a.questions.filter((q) => state.answers[qid(a, q)]).length;
+      txt = `أجبت ${toAr(done)} من ${toAr(a.questions.length)}`;
+    }
+    $("#dockCount").textContent = txt;
+  }
+
+  // بيانات المبادرة
+  function seg(name, options, opts = {}) {
+    const v = state.data[name];
+    return `<div class="seg" data-seg="${name}" role="radiogroup">${options.map((o) =>
+      `<label class="${v === o ? "checked" : ""}"><input type="radio" name="${name}" value="${esc(o)}" ${v === o ? "checked" : ""}>${esc(o)}</label>`).join("")}</div>`;
+  }
+  function inp(name, label, { type = "text", req = false, ph = "", dir = "", min = "" } = {}) {
+    return `<div class="field"><label for="f_${name}">${label}${req ? '<span class="req">*</span>' : ""}</label>
+      <input class="input" id="f_${name}" name="${name}" type="${type}" ${dir ? `dir="${dir}"` : ""} ${min !== "" ? `min="${min}"` : ""} ${type === "number" ? 'inputmode="decimal"' : ""} placeholder="${esc(ph)}" value="${esc(state.data[name] || "")}" data-field="${name}"></div>`;
+  }
+
+  function sizeSuggestion() {
+    const d = state.data;
+    const why = [];
+    if (+d.weeks > 2) why.push("مدة التنفيذ أكثر من أسبوعين");
+    if (+d.cost > 30000) why.push("التكلفة فوق ٣٠ ألف ريال");
+    if (d.donor === "يوجد" && d.donorReports === "نعم") why.push("لها جهة مانحة تشترط تقارير");
+    if (!why.length || d.size === "كبيرة") return "";
+    return `<div class="suggest">بحسب بياناتك تعد المبادرة كبيرة: ${why.join("، ")}.</div>`;
+  }
+
+  function tplData() {
+    const d = state.data;
+    return `<div>
+      <div class="step-hero"><div>
+        <p class="eyebrow">قبل المحاور</p>
+        <h1>بيانات المبادرة</h1>
+        <p>عن آخر دورة منفذة من البرنامج.</p>
+      </div></div>
+      <div class="step-body">
+        <div class="card"><h2 class="card-title">البرنامج والدورة</h2>
+          <div class="grid">
+            ${inp("program", "اسم البرنامج", { req: true })}
+            ${inp("season", "الدورة محل التقييم: الفصل أو الموسم", { req: true })}
+            <div class="grid grid-2">
+              ${inp("startDate", "تاريخ البداية", { type: "date" })}
+              ${inp("endDate", "تاريخ النهاية", { type: "date" })}
+            </div>
+            ${inp("manager", "مدير المبادرة", { req: true })}
+            <div class="field"><span class="field-label">هل سبقت للبرنامج دورة منتهية؟<span class="req">*</span></span>
+              ${seg("hasPrev", ["نعم", "لا"])}
+              <p class="hint">إن لم تسبق له دورة منتهية يختار (لا ينطبق) تلقائيا في أسئلة الإغلاق والقياس اللاحق والتقرير الختامي والتطوير، ويمكنك تعديلها.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card"><h2 class="card-title">المستفيد</h2>
+          <div class="grid">
+            <div class="field"><span class="field-label">المستفيد<span class="req">*</span></span>
+              ${seg("beneficiary", ["طفل", "عامل مع الطفل", "جهة عاملة مع الطفل"])}</div>
+            <div class="grid grid-3">
+              ${inp("age", "العمر", { ph: "مثال: ٨–١٢ سنة" })}
+              <div class="field"><span class="field-label">الجنس</span>${seg("gender", ["ذكور", "إناث", "الجنسان"])}</div>
+              ${inp("stage", "المرحلة", { ph: "مثال: الابتدائية" })}
+            </div>
+            <div class="grid grid-2">
+              ${inp("benefTarget", "المستفيدون: المستهدف", { type: "number", min: 0 })}
+              ${inp("benefRegistered", "المستفيدون: المسجلون", { type: "number", min: 0 })}
+            </div>
+          </div>
+        </div>
+
+        <div class="card"><h2 class="card-title">التنفيذ والتكلفة</h2>
+          <div class="grid">
+            <div class="grid grid-3">
+              ${inp("weeks", "مدة التنفيذ (بالأسابيع)", { type: "number", min: 0, ph: "من أول نشاط إلى آخر نشاط" })}
+              ${inp("actPlanned", "الأنشطة الرئيسة: المخططة", { type: "number", min: 0 })}
+              ${inp("actDone", "الأنشطة الرئيسة: المنفذة", { type: "number", min: 0 })}
+            </div>
+            ${inp("cost", "التكلفة الفعلية (بالريال)", { type: "number", min: 0 })}
+            <div class="field"><span class="field-label">المانح أو الشريك</span>${seg("donor", ["لا يوجد", "يوجد"])}</div>
+            ${d.donor === "يوجد" ? `<div class="grid grid-2">
+              ${inp("donorName", "اسم الجهة المانحة أو الشريكة")}
+              <div class="field"><span class="field-label">هل يشترط تقارير؟</span>${seg("donorReports", ["نعم", "لا"])}</div>
+            </div>` : ""}
+          </div>
+        </div>
+
+        <div class="card" id="sizeCard"><h2 class="card-title">حجم المبادرة<span class="req" style="color:var(--danger)">*</span></h2>
+          <div class="size-cards" role="radiogroup" data-sizegroup>
+            ${["صغيرة", "كبيرة"].map((s) => `
+            <label class="size-card ${d.size === s ? "checked" : ""}">
+              <input type="radio" name="size" value="${s}" ${d.size === s ? "checked" : ""}>
+              <h4>${s === "صغيرة" ? sizeIcon(1) : sizeIcon(3)} مبادرة ${s}</h4>
+              <p>${s === "صغيرة"
+                ? "نشاط واحد أو أنشطة قليلة متصلة مدتها لا تتجاوز أسبوعين وليست عليها التزامات تعاقدية مع مانح مثل: رحلة أو لقاء أو ورشة يوم أو مسابقة"
+                : "ما تحقق فيها واحد أو أكثر مما يلي: مدة التنفيذ أكثر من أسبوعين أو تكلفتها فوق ٣٠ ألف ريال أو لها جهة مانحة تشترط تقارير أو تعد مبادرة استراتيجية"}</p>
+            </label>`).join("")}
+          </div>
+          <div id="sizeSuggest">${sizeSuggestion()}</div>
+          <p class="rule-note">قاعدة للتسهيل: عند التردد تعامل المبادرة معاملة الكبيرة وتحسب المدة من أول لقاء إلى آخر لقاء.</p>
+        </div>
+
+        <div class="card"><h2 class="card-title">معبئ النموذج</h2>
+          <div class="grid">
+            <div class="field"><span class="field-label">المعبئ<span class="req">*</span></span>
+              ${seg("filler", ["مدير المبادرة", "قسم المتابعة وقياس الأثر أثناء الزيارة"])}</div>
+            ${inp("fillerName", "اسم المعبئ")}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function sizeIcon(n) {
+    const c = ["#A9CF45", "#6CBD53", "#27B5C1"];
+    return `<svg class="size-ico" viewBox="0 0 34 34" aria-hidden="true">${Array.from({ length: 3 }, (_, i) =>
+      `<rect x="${4 + i * 10}" y="${22 - i * 7}" width="7" height="${8 + i * 7}" rx="3.5" fill="${i < n ? c[i] : "#e8e8ed"}"/>`).join("")}</svg>`;
+  }
+
+  // المحاور
+  function tplAxis(a) {
+    return `<div>
+      <div class="step-hero">
+        <div>
+          <p class="eyebrow">المحور ${ORD[a.n]}</p>
+          <h1>${esc(a.title)}</h1>
+          <p>${esc(a.lead)}</p>
+        </div>
+        <div class="axis-num ${a.safety ? "safety" : ""}" aria-hidden="true">${toAr(a.n)}</div>
+      </div>
+      <div class="step-body">
+        ${a.safety ? `<div class="safety-banner">
+          <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5 4 5.5v6c0 5 3.4 9 8 10.5 4.6-1.5 8-5.5 8-10.5v-6l-8-3Z" fill="none" stroke="#27B5C1" stroke-width="2" stroke-linejoin="round"/><path d="m8.5 12 2.5 2.5 4.5-5" fill="none" stroke="#27B5C1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>أسئلة هذا المحور تتابعها الإدارة بعناية خاصة. اختر الوصف الأقرب للواقع كما هو.</span></div>` : ""}
+        ${a.questions.map((q) => tplQuestion(a, q)).join("")}
+      </div>
+    </div>`;
+  }
+
+  function tplQuestion(a, q) {
+    const id = qid(a, q);
+    const ans = state.answers[id] || {};
+    const size = state.data.size === "صغيرة" ? "small" : state.data.size === "كبيرة" ? "large" : null;
+    const sized = size && q.sized ? q.sized[size] : null;
+    const note = sized && sized.note ? sized.note : q.note;
+    const locked = !!ans.locked;
+    const opts = q.options.map((t, i) => (sized && sized.options && sized.options[i]) || t);
+    const optHtml = opts.map((t, i) => {
+      const L = LETTERS[i];
+      const on = ans.c === L;
+      return `<li><label class="opt ${on ? "checked" : ""} ${locked ? "locked" : ""}">
+        <input type="radio" name="${id}" value="${L}" ${on ? "checked" : ""} ${locked ? "disabled" : ""}>
+        <span class="opt-letter">${L}</span><span class="opt-text">${esc(t)}</span></label></li>`;
+    }).join("");
+    const naOn = ans.c === "NA";
+    return `<section class="q" id="q_${id}" data-q="${id}">
+      <div class="q-head"><span class="q-num">${qLabel(a, q)}</span><h3 class="q-text">${esc(q.text)}</h3></div>
+      ${note ? `<p class="q-note ${sized && sized.note ? "sized" : ""}">${esc(note)}</p>` : ""}
+      <ul class="opts" role="radiogroup" aria-label="${esc(q.text)}">
+        ${optHtml}
+        <li><label class="opt na ${naOn ? "checked" : ""} ${locked ? "locked" : ""}">
+          <input type="radio" name="${id}" value="NA" ${naOn ? "checked" : ""} ${locked ? "disabled" : ""}>
+          <span class="opt-letter">—</span><span class="opt-text">لا ينطبق</span></label></li>
+      </ul>
+      <div class="extra ${ans.c === "أ" ? "open" : ""}" data-extra="ev"><div><div class="extra-in">
+        <span class="extra-label">الشاهد / الدليل <small>اكتب وصفه أو ضع رابطه أو أرفق ملفا</small></span>
+        <textarea class="textarea" data-ev="${id}" placeholder="مثال: وثيقة المبادرة المعتمدة بتاريخ…">${esc(ans.ev || "")}</textarea>
+        <input class="input" dir="ltr" type="url" data-link="${id}" placeholder="https://…  رابط الشاهد (اختياري)" value="${esc(ans.link || "")}">
+        <label class="drop" data-drop="${id}">
+          <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0-4.5 4.5M12 4l4.5 4.5M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>اسحب الملف هنا أو اضغط للاختيار — حتى ${toAr(CFG.MAX_FILES_PER_QUESTION || 3)} ملفات، ${toAr(CFG.MAX_FILE_MB || 10)} م.ب للملف</span>
+          <input type="file" multiple hidden data-file="${id}">
+        </label>
+        <ul class="files" data-files="${id}"></ul>
+      </div></div></div>
+      <div class="extra ${naOn ? "open" : ""}" data-extra="na"><div><div class="extra-in">
+        <span class="extra-label">سبب عدم الانطباق ${ans.auto ? '<small class="auto-tag">— معبأ تلقائيا</small>' : ""}</span>
+        <input class="input" data-reason="${id}" placeholder="اذكر السبب" value="${esc(ans.reason || "")}" ${locked ? "readonly" : ""}>
+      </div></div></div>
+    </section>`;
+  }
+
+  function renderFiles(id) {
+    const ul = $(`[data-files="${id}"]`);
+    if (!ul) return;
+    const list = files[id] || [];
+    ul.innerHTML = list.map((f, i) => `<li><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z M14 3v5h5" fill="none" stroke="#27B5C1" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      <span class="fname">${esc(f.name)}</span><span class="fsize">${toAr((f.size / 1048576).toFixed(1))} م.ب</span>
+      <button type="button" data-rmfile="${id}" data-idx="${i}" aria-label="إزالة الملف">×</button></li>`).join("");
+  }
+
+  function addFiles(id, list) {
+    const max = CFG.MAX_FILES_PER_QUESTION || 3;
+    const maxB = (CFG.MAX_FILE_MB || 10) * 1048576;
+    const cur = files[id] || (files[id] = []);
+    for (const f of list) {
+      if (cur.length >= max) { toast(`الحد الأقصى ${toAr(max)} ملفات للسؤال`); break; }
+      if (f.size > maxB) { toast(`الملف ${f.name} أكبر من ${toAr(CFG.MAX_FILE_MB || 10)} م.ب`); continue; }
+      cur.push(f);
+    }
+    renderFiles(id);
+    $(`#q_${id}`)?.classList.remove("missing");
+  }
+
+  // المراجعة
+  function ring(done, total) {
+    const r = 14, c = 2 * Math.PI * r, off = c * (1 - (total ? done / total : 0));
+    return `<svg class="ring" viewBox="0 0 34 34" aria-hidden="true"><circle class="bg" cx="17" cy="17" r="${r}"/><circle class="fg" cx="17" cy="17" r="${r}" stroke-dasharray="${c}" stroke-dashoffset="${off}"/></svg>`;
+  }
+
+  function tplReview() {
+    const d = state.data;
+    return `<div>
+      <div class="step-hero"><div>
+        <p class="eyebrow">الخطوة الأخيرة</p>
+        <h1>راجع، ثم أرسل.</h1>
+        <p>${esc(d.program || "")}${d.season ? " — " + esc(d.season) : ""}${d.size ? " · مبادرة " + esc(d.size) : ""}</p>
+      </div></div>
+      <div class="step-body">
+        <div class="review-grid">
+          <button type="button" class="review-row" data-goto="0">
+            <span class="rr-t">بيانات المبادرة</span><span class="rr-c">${d.program ? "مكتملة" : "ناقصة"}</span>${ring(d.program ? 1 : 0, 1)}</button>
+          ${AXES.map((a, i) => {
+            const done = a.questions.filter((q) => state.answers[qid(a, q)]).length;
+            return `<button type="button" class="review-row" data-goto="${i + 1}">
+              <span class="rr-t">المحور ${ORD[a.n]}: ${esc(a.title)}</span>
+              <span class="rr-c">${toAr(done)} من ${toAr(a.questions.length)}</span>${ring(done, a.questions.length)}</button>`;
+          }).join("")}
+        </div>
+        <div class="card"><h2 class="card-title">سؤالان ختاميان مفتوحان <span class="hint" style="display:inline">(اختياريان)</span></h2>
+          <div class="grid">
+            <div class="field"><label for="openGood">ما الذي نجح في المبادرة ويستحق التعميم؟</label>
+              <textarea class="textarea" id="openGood" data-open="good">${esc(state.open.good)}</textarea></div>
+            <div class="field"><label for="openBad">ما أبرز ما لم ينجح وما سببه؟</label>
+              <textarea class="textarea" id="openBad" data-open="bad">${esc(state.open.bad)}</textarea></div>
+          </div>
+        </div>
+        <p class="fine" style="text-align:center">بالإرسال تنتقل الإجابات والشواهد إلى قسم المتابعة وقياس الأثر وتحذف المسودة من جهازك.</p>
+      </div>
+    </div>`;
+  }
+
+  // ——— التحقق ———
+  function validateData() {
+    const d = state.data;
+    const bad = [];
+    ["program", "season", "manager"].forEach((k) => { if (!String(d[k] || "").trim()) bad.push($(`[data-field="${k}"]`)); });
+    ["hasPrev", "beneficiary", "filler"].forEach((k) => { if (!d[k]) bad.push($(`[data-seg="${k}"]`)); });
+    if (!d.size) bad.push($("[data-sizegroup]"));
+    $$(".bad").forEach((e) => e.classList.remove("bad"));
+    $$(".size-card").forEach((e) => e.classList.remove("bad"));
+    bad.forEach((e) => {
+      if (!e) return;
+      if (e.matches("[data-sizegroup]")) $$(".size-card", e).forEach((c) => c.classList.add("bad"));
+      else e.classList.add("bad");
+    });
+    if (d.startDate && d.endDate && d.endDate < d.startDate) {
+      bad.push($('[data-field="endDate"]'));
+      $('[data-field="endDate"]').classList.add("bad");
+      toast("تاريخ النهاية قبل تاريخ البداية");
+    } else if (bad.length) toast("أكمل الحقول المطلوبة");
+    if (bad[0]) bad[0].scrollIntoView({ behavior: "smooth", block: "center" });
+    return !bad.length;
+  }
+
+  function questionProblem(id) {
+    const a = state.answers[id];
+    if (!a || !a.c) return "لم يجب";
+    if (a.c === "أ" && !String(a.ev || "").trim() && !String(a.link || "").trim() && !(files[id] || []).length) return "الشاهد مطلوب عند اختيار (أ)";
+    if (a.c === "NA" && !String(a.reason || "").trim()) return "اذكر سبب عدم الانطباق";
+    return "";
+  }
+
+  function validateAxis(a) {
+    let first = null, firstMsg = "";
+    a.questions.forEach((q) => {
+      const id = qid(a, q);
+      const p = questionProblem(id);
+      $(`#q_${id}`).classList.toggle("missing", !!p);
+      if (p && !first) { first = $(`#q_${id}`); firstMsg = p; }
+    });
+    if (first) { first.scrollIntoView({ behavior: "smooth", block: "start" }); toast(firstMsg); }
+    return !first;
+  }
+
+  function firstInvalidStep() {
+    const d = state.data;
+    if (!d.program || !d.season || !d.manager || !d.hasPrev || !d.beneficiary || !d.filler || !d.size) return 0;
+    for (let i = 0; i < AXES.length; i++) {
+      if (AXES[i].questions.some((q) => questionProblem(qid(AXES[i], q)))) return i + 1;
+    }
+    return -1;
+  }
+
+  // ——— التنقل ———
+  function go(step) {
+    state.step = Math.max(0, Math.min(STEP_COUNT - 1, step));
+    saveDraft();
+    renderStep();
+  }
+
+  function next() {
+    const i = state.step;
+    if (i === 0 && !validateData()) return;
+    if (i > 0 && i <= AXES.length && !validateAxis(AXES[i - 1])) return;
+    if (i === STEP_COUNT - 1) return submit();
+    go(i + 1);
+  }
+
+  // ——— الإرسال ———
+  function readBase64(file) {
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(String(r.result).split(",")[1] || "");
+      r.onerror = () => rej(r.error);
+      r.readAsDataURL(file);
+    });
+  }
+
+  function overlay(on, text, pct) {
+    $("#overlay").hidden = !on;
+    if (text) $("#overlayText").textContent = text;
+    $("#overlayBar").style.width = (pct || 0) + "%";
+  }
+
+  async function submit() {
+    const bad = firstInvalidStep();
+    if (bad !== -1) {
+      toast(bad === 0 ? "بيانات المبادرة ناقصة" : `المحور ${ORD[bad]} فيه أسئلة ناقصة`);
+      go(bad);
+      setTimeout(() => (bad === 0 ? validateData() : validateAxis(AXES[bad - 1])), 350);
+      return;
+    }
+    if (!configured()) { toast("لم يضبط رابط قوقل في config.js بعد — لا يمكن الإرسال", 4000); return; }
+
+    const jobs = [];
+    Object.keys(files).forEach((id) => {
+      if (state.answers[id] && state.answers[id].c === "أ") (files[id] || []).forEach((f) => jobs.push({ id, f }));
+    });
+    const total = jobs.length + 1;
+    const uploaded = {};
+    $("#nextBtn").disabled = true;
+    try {
+      for (let k = 0; k < jobs.length; k++) {
+        const { id, f } = jobs[k];
+        overlay(true, `جار رفع الشواهد ${toAr(k + 1)} من ${toAr(jobs.length)}`, (k / total) * 100);
+        const r = await api({ action: "upload", code, program: state.data.program || "", qid: id, name: f.name, type: f.type || "application/octet-stream", data: await readBase64(f) });
+        if (!r.ok) throw new Error(r.error || "تعذر رفع " + f.name);
+        (uploaded[id] = uploaded[id] || []).push(r.url);
+      }
+      overlay(true, "جار إرسال التقييم…", ((total - 1) / total) * 100);
+      const answers = {};
+      Object.entries(state.answers).forEach(([id, a]) => {
+        answers[id] = { c: a.c, ev: a.c === "أ" ? a.ev || "" : "", link: a.c === "أ" ? a.link || "" : "", files: a.c === "أ" ? uploaded[id] || [] : [], reason: a.c === "NA" ? a.reason || "" : "" };
+      });
+      const r = await api({ action: "submit", code, data: state.data, answers, open: state.open, startedAt: state.startedAt });
+      if (!r.ok) throw new Error(r.error || "تعذر الإرسال");
+      overlay(true, "تم", 100);
+      clearDraft();
+      Object.keys(files).forEach((k) => delete files[k]);
+      state = freshState();
+      setTimeout(() => {
+        overlay(false);
+        $("#doneRef").textContent = r.id ? `رقم المرجع: ${r.id}` : "";
+        $("#topbarTitle").textContent = "تم الإرسال";
+        renderProgress(STEP_COUNT);
+        show("screenDone");
+      }, 400);
+    } catch (err) {
+      overlay(false);
+      toast(err.message && /[؀-ۿ]/.test(err.message) ? err.message : "تعذر الإرسال، تحقق من الاتصال وحاول مرة أخرى. إجاباتك محفوظة.", 4500);
+    } finally { $("#nextBtn").disabled = false; }
+  }
+
+  // ——— الأحداث ———
+  function onChange(e) {
+    const t = e.target;
+    // خيار سؤال
+    if (t.type === "radio" && /^a\dq\d$/.test(t.name)) {
+      const id = t.name;
+      const prev = state.answers[id] || {};
+      state.answers[id] = { ...prev, c: t.value, auto: false, locked: false };
+      if (t.value !== "NA" && prev.auto) state.answers[id].reason = "";
+      const sec = $(`#q_${id}`);
+      $$(".opt", sec).forEach((l) => l.classList.toggle("checked", l.querySelector("input").checked));
+      $('[data-extra="ev"]', sec).classList.toggle("open", t.value === "أ");
+      $('[data-extra="na"]', sec).classList.toggle("open", t.value === "NA");
+      const tag = $(".auto-tag", sec); if (tag) tag.remove();
+      sec.classList.remove("missing");
+      if (t.value === "NA") setTimeout(() => $(`[data-reason="${id}"]`).focus({ preventScroll: true }), 250);
+      updateDock();
+      saveDraft();
+      return;
+    }
+    // مقاطع بيانات المبادرة
+    if (t.type === "radio" && (t.closest("[data-seg]") || t.name === "size")) {
+      state.data[t.name] = t.value;
+      const group = t.closest("[data-seg]") || t.closest("[data-sizegroup]");
+      $$("label", group).forEach((l) => l.classList.toggle("checked", l.querySelector("input").checked));
+      group.classList.remove("bad");
+      $$(".size-card", group).forEach((c) => c.classList.remove("bad"));
+      if (t.name === "donor") { renderStep(); }
+      if (["size", "hasPrev"].includes(t.name)) applyRules();
+      if (["donor", "donorReports", "size"].includes(t.name)) { const s = $("#sizeSuggest"); if (s) s.innerHTML = sizeSuggestion(); }
+      saveDraft();
+      return;
+    }
+    if (t.matches("[data-file]")) { addFiles(t.dataset.file, t.files); t.value = ""; }
+  }
+
+  function onInput(e) {
+    const t = e.target;
+    if (t.dataset.field) {
+      state.data[t.dataset.field] = t.value;
+      t.classList.remove("bad");
+      if (["weeks", "cost"].includes(t.dataset.field)) { const s = $("#sizeSuggest"); if (s) s.innerHTML = sizeSuggestion(); }
+    } else if (t.dataset.ev) { (state.answers[t.dataset.ev] ||= {}).ev = t.value; $(`#q_${t.dataset.ev}`).classList.remove("missing"); }
+    else if (t.dataset.link) { (state.answers[t.dataset.link] ||= {}).link = t.value; $(`#q_${t.dataset.link}`).classList.remove("missing"); }
+    else if (t.dataset.reason) { const a = (state.answers[t.dataset.reason] ||= {}); a.reason = t.value; a.auto = false; $(`#q_${t.dataset.reason}`).classList.remove("missing"); }
+    else if (t.dataset.open) state.open[t.dataset.open] = t.value;
+    else return;
+    saveDraft();
+  }
+
+  function onClick(e) {
+    const rm = e.target.closest("[data-rmfile]");
+    if (rm) { files[rm.dataset.rmfile].splice(+rm.dataset.idx, 1); renderFiles(rm.dataset.rmfile); return; }
+    const g = e.target.closest("[data-goto]");
+    if (g) { go(+g.dataset.goto); return; }
+  }
+
+  function bindDrops() {
+    document.addEventListener("dragover", (e) => {
+      const d = e.target.closest && e.target.closest("[data-drop]");
+      if (d) { e.preventDefault(); d.classList.add("over"); }
+    });
+    document.addEventListener("dragleave", (e) => {
+      const d = e.target.closest && e.target.closest("[data-drop]");
+      if (d) d.classList.remove("over");
+    });
+    document.addEventListener("drop", (e) => {
+      const d = e.target.closest && e.target.closest("[data-drop]");
+      if (!d) return;
+      e.preventDefault(); d.classList.remove("over");
+      addFiles(d.dataset.drop, e.dataTransfer.files);
+    });
+  }
+
+  function init() {
+    $("#gateForm").addEventListener("submit", handleGate);
+    $("#startBtn").addEventListener("click", () => { state = freshState(); show("screenSteps"); renderStep(); });
+    $("#prevBtn").addEventListener("click", () => go(state.step - 1));
+    $("#nextBtn").addEventListener("click", next);
+    $("#newBtn").addEventListener("click", () => { $("#topbarTitle").textContent = "نموذج تقييم البرامج القائمة"; renderProgress(-1); show("screenIntro"); });
+    const host = $("#stepHost");
+    host.addEventListener("change", onChange);
+    host.addEventListener("input", onInput);
+    host.addEventListener("click", onClick);
+    bindDrops();
+    window.addEventListener("beforeunload", () => { if (state.step > 0 || Object.keys(state.answers).length) storage((ls) => ls.setItem(DRAFT_KEY, JSON.stringify({ ...state, savedAt: Date.now() }))); });
+
+    const saved = storage((ls) => ls.getItem(CODE_KEY));
+    if (saved) $("#accessCode").value = saved;
+    show("screenGate");
+    $("#accessCode").focus({ preventScroll: true });
+  }
+
+  init();
+})();
