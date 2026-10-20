@@ -164,16 +164,11 @@ button, input, textarea { font: inherit; color: inherit; }
   content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background: radial-gradient(circle 420px at var(--mx) var(--my), rgba(39, 181, 193, .20), rgba(39, 181, 193, .06) 45%, transparent 70%);
 }
-.stage-pattern, .stage-light {
-  position: absolute; inset: -40px; z-index: -1; pointer-events: none;
+.stage-light { /* الباترن لا يظهر إلا داخل الإضاءة */
+  position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background-image: url("assets/pattern-teal.svg");
   background-size: 200px auto;
   background-repeat: repeat;
-}
-.stage-pattern { opacity: .07; }
-.stage-light {
-  inset: 0;
-  background-position: 0 0;
   -webkit-mask-image: radial-gradient(circle 230px at var(--mx) var(--my), #000 0%, rgba(0, 0, 0, .45) 38%, transparent 72%);
   mask-image: radial-gradient(circle 230px at var(--mx) var(--my), #000 0%, rgba(0, 0, 0, .45) 38%, transparent 72%);
   opacity: .9;
