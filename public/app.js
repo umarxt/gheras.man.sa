@@ -303,7 +303,7 @@
         <div class="card"><h2 class="card-title">البرنامج والدورة</h2>
           <div class="grid">
             ${programField()}
-            <div class="field"><span class="field-label">الدورة محل التقييم<span class="req">*</span></span>
+            <div class="field"><span class="field-label">دورة المبادرة<span class="req">*</span></span>
               ${seg("season", ["فصلية", "سنوية"])}</div>
             <div class="grid grid-2">
               ${inp("startDate", "تاريخ البداية", { type: "date" })}

@@ -41,7 +41,7 @@ const SHEET_KEY = 'مفتاح الاحتساب';
 
 const DATA_FIELDS = [
   ['program', 'اسم البرنامج'],
-  ['season', 'الدورة محل التقييم'],
+  ['season', 'دورة المبادرة'],
   ['startDate', 'تاريخ البداية'],
   ['endDate', 'تاريخ النهاية'],
   ['manager', 'مدير المبادرة'],
