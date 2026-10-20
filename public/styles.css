@@ -176,7 +176,7 @@ button, input, textarea { font: inherit; color: inherit; }
 .stage-inner { position: relative; width: min(1080px, 100%); display: grid; justify-items: start; animation: rise .9s var(--ease-out) both; }
 .stage-inner > * { max-width: 480px; }
 @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
-.stage-logo { position: relative; width: 150px; margin: 0 0 56px; }
+.stage-logo { position: relative; width: 150px; margin: 0 0 56px; justify-self: center; }
 .stage-logo img { position: relative; width: 100%; }
 .halo {
   position: absolute; width: 180px; height: 180px; border-radius: 50%;
