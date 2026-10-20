@@ -53,19 +53,39 @@
           <span class="halo" aria-hidden="true"></span>
           <img src="assets/logo-white.png" alt="جمعية غراس لتنمية الطفل">
         </div>
-        <p class="stage-kicker">نموذج تقييم</p>
-        <h1 class="stage-title">البرامج القائمة</h1>
-        <p class="stage-sub">منهجية إدارة المبادرات ومتابعتها وقياس أثرها</p>
-        <form class="gate-form" id="gateForm" autocomplete="off" novalidate>
-          <label class="sr-only" for="accessCode">رمز الدخول</label>
-          <div class="code-well">
-            <input id="accessCode" type="password" placeholder="رمز الدخول" required>
-            <button type="submit" class="code-go" aria-label="دخول">
-              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="login-card" id="loginCard">
+          <p class="stage-kicker">نموذج تقييم</p>
+          <h1 class="stage-title">البرامج القائمة</h1>
+          <p class="stage-sub">منهجية إدارة المبادرات ومتابعتها وقياس أثرها</p>
+          <form class="gate-form" id="gateForm" autocomplete="off" novalidate>
+            <label class="login-label" for="accessCode">رمز الدخول</label>
+            <div class="code-well" id="codeWell">
+              <input id="accessCode" type="password" placeholder="أدخل الرمز" required>
+              <!-- رجل الدفتر: يرفع دفتره عند التركيز ويكتب مع كل حرف -->
+              <svg class="note-man" id="noteMan" viewBox="0 0 22 30" aria-hidden="true">
+                <circle class="head" cx="9" cy="4" r="3.2"/>
+                <path d="M9 7.5V18"/>
+                <path class="arm-back" d="M9 10 6 15"/>
+                <g class="arm-note"><path d="M9 10l5 3.5"/><rect class="notebook" x="13" y="9.5" width="6" height="8" rx="1"/><path class="pen" d="M15 12.5h2.5M15 14.5h2"/></g>
+                <path class="leg" d="M9 18 6.5 27"/><path class="leg" d="M9 18l2.5 9"/>
+              </svg>
+            </div>
+            <button type="submit" class="portal-btn" id="portalBtn">
+              <span class="btn-label" id="btnLabel"><i class="dot"></i><span id="btnText">دخول</span></span>
+              <span class="portal-scene" aria-hidden="true">
+                <span class="ground"></span>
+                <span class="door"><span class="door-light"></span><span class="door-panel"><i></i></span></span>
+                <svg class="walker" id="walker" viewBox="0 0 16 30">
+                  <circle class="head" cx="8" cy="4" r="3.2"/>
+                  <path d="M8 7.5V18"/><path class="arm arm-a" d="M8 10 5.5 15.5"/><path class="arm arm-b" d="M8 10l2.5 5.5"/>
+                  <path class="leg leg-a" d="M8 18 5 27"/><path class="leg leg-b" d="M8 18l3 9"/>
+                </svg>
+              </span>
             </button>
-          </div>
-          <p class="form-msg" id="gateMsg" role="alert"></p>
-        </form>
+            <p class="portal-caption" id="portalCaption">اضغط للدخول</p>
+            <p class="form-msg" id="gateMsg" role="alert"></p>
+          </form>
+        </div>
       </div>
     </section>
 
@@ -100,12 +120,45 @@
     </div>
   </nav>
 
-  <!-- نافذة الإرسال -->
+  <!-- نافذة الإرسال: مشهد التوصيل -->
   <div class="overlay" id="overlay" hidden>
-    <div class="overlay-card" role="status" aria-live="polite">
-      <div class="spinner" aria-hidden="true"></div>
-      <p id="overlayText">جار الإرسال…</p>
-      <div class="bar"><span id="overlayBar"></span></div>
+    <div class="courier-wrap" role="status" aria-live="polite">
+      <div class="courier-pill" id="courierPill">
+        <span class="btn-label"><i class="dot"></i><span>إرسال التقييم</span></span>
+        <div class="courier-scene" aria-hidden="true">
+          <span class="ground"></span>
+          <svg class="sender" id="sender" viewBox="0 0 16 30">
+            <circle class="head" cx="8" cy="4" r="3.2"/>
+            <path d="M8 7.5V18"/>
+            <path class="arm arm-r" d="M8 10.5 12 14"/><path class="arm arm-l" d="M8 10.5 4.5 15"/>
+            <path class="leg leg-a" d="M8 18 5 27"/><path class="leg leg-b" d="M8 18l3 9"/>
+          </svg>
+          <span class="parcel" id="parcel"><i></i></span>
+          <div class="scooter" id="scooter">
+            <span class="speed"><i></i><i></i><i></i></span>
+            <svg viewBox="0 0 120 54">
+              <rect class="rack" x="6" y="22" width="34" height="14" rx="3"/>
+              <rect class="stripe" x="10" y="27" width="10" height="2.4" rx="1.2"/>
+              <path class="deck" d="M24 41h70"/>
+              <rect class="seatbox" x="44" y="27" width="24" height="9" rx="4.5"/>
+              <path class="body" d="M66 36c8 0 14-1 20-6"/>
+              <rect class="lamp" x="62" y="31" width="13" height="4" rx="2"/>
+              <path class="stem" d="M94 41 88 14M84 14h8"/>
+              <g class="rider">
+                <circle class="head" cx="58" cy="7" r="3.6"/>
+                <path d="M57.5 11 55 26"/>
+                <path d="M55 26h9l2 9"/>
+                <path d="M57 15 87 15"/>
+                <path class="rider-wave" d="M57 13.5l7-7"/>
+              </g>
+              <circle class="wheel" cx="22" cy="44" r="7"/><circle class="hub" cx="22" cy="44" r="2.4"/>
+              <circle class="wheel" cx="96" cy="44" r="7"/><circle class="hub" cx="96" cy="44" r="2.4"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <p class="courier-label" id="overlayText">جار الإرسال…</p>
+      <div class="bar" id="courierBar"><span id="overlayBar"></span></div>
     </div>
   </div>
 

@@ -156,30 +156,67 @@
   const configured = () => /^https:\/\/script\.google\.com\//.test(CFG.APPS_SCRIPT_URL || "");
 
   // ——— الدخول ———
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const W = (ms) => wait(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : ms);
+
+  function shakeCard() {
+    const c = $("#loginCard");
+    c.classList.remove("shake"); void c.offsetWidth; c.classList.add("shake");
+  }
+
+  // الدخول: يمشي الرجل إلى البوابة؛ تفتح إن صح الرمز فيدخل وتختفي البطاقة، وإلا يرتد ويعود
+  let gateBusy = false;
   async function handleGate(e) {
     e.preventDefault();
+    if (gateBusy) return;
     const input = $("#accessCode");
     const val = input.value.trim();
     const msg = $("#gateMsg");
-    if (!val) { msg.textContent = "أدخل رمز الدخول"; input.focus(); return; }
+    if (!val) { msg.textContent = "أدخل رمز الدخول"; shakeCard(); input.focus(); return; }
     msg.textContent = "";
-    const btn = $(".code-go");
-    btn.disabled = true;
-    try {
-      if (configured()) {
-        const r = await api({ action: "verify", code: val });
-        if (!r.ok) throw new Error(r.error || "bad");
-      } else {
-        toast("وضع المعاينة: لم يضبط رابط قوقل بعد");
-      }
+    gateBusy = true;
+    const card = $("#loginCard"), btn = $("#portalBtn"), walker = $("#walker"), door = $(".door", btn), cap = $("#portalCaption");
+    const setW = (c) => walker.setAttribute("class", "walker " + c);
+    cap.classList.add("hide");
+    btn.classList.add("playing");
+    setW("walking");
+    await wait(40);
+    setW("walking at-door");
+    const verify = (async () => {
+      if (!configured()) return { ok: true, preview: true };
+      try { return await api({ action: "verify", code: val }); } catch (err) { return { ok: false, net: true }; }
+    })();
+    const [r] = await Promise.all([verify, W(1200)]);
+    if (r.ok) {
+      setW("at-door");
+      door.classList.add("open");
+      await W(380);
+      setW("walking at-door enter");
+      await W(520);
+      door.classList.remove("open");
+      await W(260);
+      card.classList.add("card-hide");
+      await W(480);
       code = val;
       storage((ls) => ls.setItem(CODE_KEY, val));
+      if (r.preview) toast("وضع المعاينة: لم يضبط رابط قوقل بعد");
       enterForm();
-    } catch (err) {
-      msg.textContent = err.message === "bad" || err.message === "رمز الدخول غير صحيح" ? "رمز الدخول غير صحيح" : "تعذر التحقق، تأكد من الاتصال وحاول مرة أخرى";
-      const g = $("#screenGate");
-      g.classList.remove("shake"); void g.offsetWidth; g.classList.add("shake");
-    } finally { btn.disabled = false; }
+      card.classList.remove("card-hide");
+      btn.classList.remove("playing");
+      cap.classList.remove("hide");
+      setW("");
+    } else {
+      setW("at-door bump");
+      await W(170);
+      setW("walking back");
+      await W(920);
+      setW("");
+      btn.classList.remove("playing");
+      cap.classList.remove("hide");
+      msg.textContent = r.net ? "تعذر التحقق، تأكد من الاتصال وحاول مرة أخرى" : "رمز الدخول غير صحيح";
+      shakeCard();
+    }
+    gateBusy = false;
   }
 
   function enterForm() {
@@ -578,11 +615,51 @@
     });
   }
 
-  function overlay(on, text, pct) {
-    $("#overlay").hidden = !on;
-    if (text) $("#overlayText").textContent = text;
-    $("#overlayBar").style.width = (pct || 0) + "%";
+  // ——— مشهد التوصيل أثناء الإرسال ———
+  let creep = null;
+  function setBar(pct) { $("#overlayBar").style.width = Math.max(0, Math.min(100, pct)) + "%"; }
+  async function showLabel(t) {
+    const l = $("#overlayText");
+    if (l.textContent === t) return;
+    l.classList.add("fade");
+    await W(200);
+    l.textContent = t;
+    l.classList.remove("fade");
   }
+  function startCreep(from, to) { // تقدم هادئ أثناء انتظار الشبكة
+    clearInterval(creep);
+    let v = from;
+    creep = setInterval(() => { v += (to - v) * 0.06; setBar(v); }, 240);
+  }
+  async function courierIntro() {
+    const pill = $("#courierPill"), sender = $("#sender");
+    pill.className = "courier-pill";
+    sender.setAttribute("class", "sender");
+    $("#courierBar").classList.remove("active");
+    setBar(0);
+    $("#overlayText").textContent = "";
+    $("#overlay").hidden = false;
+    await W(450);
+    pill.classList.add("playing");
+    $("#courierBar").classList.add("active");
+    await W(350);
+    sender.setAttribute("class", "sender walking");
+    pill.classList.add("walk");
+    await W(1100);
+    sender.setAttribute("class", "sender");
+    pill.classList.add("hand");
+    await W(560);
+    pill.classList.add("stepback", "idle");
+  }
+  async function courierGo() {
+    const pill = $("#courierPill");
+    pill.classList.add("react");
+    await W(520);
+    pill.classList.remove("idle");
+    pill.classList.add("go");
+    await W(1050);
+  }
+  function courierHide() { clearInterval(creep); $("#overlay").hidden = true; }
 
   async function submit() {
     const bad = firstInvalidStep();
@@ -601,15 +678,18 @@
     const total = jobs.length + 1;
     const uploaded = {};
     $("#nextBtn").disabled = true;
+    const intro = courierIntro();
     try {
       for (let k = 0; k < jobs.length; k++) {
         const { id, f } = jobs[k];
-        overlay(true, `جار رفع الشواهد ${toAr(k + 1)} من ${toAr(jobs.length)}`, (k / total) * 100);
+        showLabel(`جار رفع الشواهد ${toAr(k + 1)} من ${toAr(jobs.length)}`);
+        startCreep((k / total) * 90, ((k + 1) / total) * 90);
         const r = await api({ action: "upload", code, program: state.data.program || "", qid: id, name: f.name, type: f.type || "application/octet-stream", data: await readBase64(f) });
         if (!r.ok) throw new Error(r.error || "تعذر رفع " + f.name);
         (uploaded[id] = uploaded[id] || []).push(r.url);
       }
-      overlay(true, "جار إرسال التقييم…", ((total - 1) / total) * 100);
+      showLabel("جار إرسال التقييم…");
+      startCreep(((total - 1) / total) * 90, 94);
       const answers = {};
       Object.entries(state.answers).forEach(([id, a]) => {
         answers[id] = { c: a.c, ev: a.c === "أ" ? a.ev || "" : "", link: a.c === "أ" ? a.link || "" : "", files: a.c === "أ" ? uploaded[id] || [] : [], reason: a.c === "NA" ? a.reason || "" : "" };
@@ -618,19 +698,22 @@
       delete data.programChoice; delete data.programOther;
       const r = await api({ action: "submit", code, data, answers, open: state.open, startedAt: state.startedAt });
       if (!r.ok) throw new Error(r.error || "تعذر الإرسال");
-      overlay(true, "تم", 100);
+      clearInterval(creep);
+      setBar(100);
+      showLabel("تم الإرسال");
       clearDraft();
       Object.keys(files).forEach((k) => delete files[k]);
       state = freshState();
-      setTimeout(() => {
-        overlay(false);
-        $("#doneRef").innerHTML = r.id ? `رقم المرجع: <bdi dir="ltr">${esc(r.id)}</bdi>` : "";
-        $("#topbarTitle").textContent = "تم الإرسال";
-        renderProgress(STEP_COUNT);
-        show("screenDone");
-      }, 400);
+      await intro;
+      await courierGo();
+      $("#doneRef").innerHTML = r.id ? `رقم المرجع: <bdi dir="ltr">${esc(r.id)}</bdi>` : "";
+      $("#topbarTitle").textContent = "تم الإرسال";
+      renderProgress(STEP_COUNT);
+      show("screenDone");
+      courierHide();
     } catch (err) {
-      overlay(false);
+      await intro;
+      courierHide();
       toast(err.message && /[؀-ۿ]/.test(err.message) ? err.message : "تعذر الإرسال، تحقق من الاتصال وحاول مرة أخرى. إجاباتك محفوظة.", 4500);
     } finally { $("#nextBtn").disabled = false; }
   }
@@ -739,6 +822,10 @@
 
   function init() {
     $("#gateForm").addEventListener("submit", handleGate);
+    $("#accessCode").addEventListener("input", () => {
+      const m = $("#noteMan");
+      m.classList.remove("write"); void m.getBoundingClientRect(); m.classList.add("write");
+    });
     $("#themeToggle").addEventListener("click", toggleTheme);
     const tb = $("#themeToggle"); tb.dataset.state = currentTheme(); tb.setAttribute("aria-pressed", currentTheme() === "dark" ? "true" : "false");
     darkMQ.addEventListener && darkMQ.addEventListener("change", () => { if (!storage((ls) => ls.getItem(THEME_KEY))) tb.dataset.state = currentTheme(); });
