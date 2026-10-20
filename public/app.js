@@ -391,7 +391,8 @@
             ${["صغيرة", "كبيرة"].map((s) => `
             <label class="size-card ${d.size === s ? "checked" : ""}">
               <input type="radio" name="size" value="${s}" ${d.size === s ? "checked" : ""}>
-              <h4>${s === "صغيرة" ? sizeIcon(1) : sizeIcon(3)} مبادرة ${s}</h4>
+              <span class="size-scene" aria-hidden="true">${sizeScene(s === "كبيرة")}</span>
+              <h4>مبادرة ${s}</h4>
               <p>${s === "صغيرة"
                 ? "نشاط واحد أو أنشطة قليلة متصلة مدتها لا تتجاوز أسبوعين وليست عليها التزامات تعاقدية مع مانح مثل: رحلة أو لقاء أو ورشة يوم أو مسابقة"
                 : "ما تحقق فيها واحد أو أكثر مما يلي: مدة التنفيذ أكثر من أسبوعين أو تكلفتها فوق ٣٠ ألف ريال أو لها جهة مانحة تشترط تقارير أو تعد مبادرة استراتيجية"}</p>
@@ -412,10 +413,34 @@
     </div>`;
   }
 
-  function sizeIcon(n) {
-    const c = ["#A9CF45", "#6CBD53", "#27B5C1"];
-    return `<svg class="size-ico" viewBox="0 0 34 34" aria-hidden="true">${Array.from({ length: 3 }, (_, i) =>
-      `<rect x="${4 + i * 10}" y="${22 - i * 7}" width="7" height="${8 + i * 7}" rx="3.5" fill="${i < n ? c[i] : "var(--line)"}"/>`).join("")}</svg>`;
+  // رسمة الحجم بنفس أسلوب مشهد التوصيل: الصغيرة شخص يحمل طردا واحدا، والكبيرة مندوب بسكوتر محمل بعدة طرود
+  const parcelSvg = (x, y, w = 13, h = 11) =>
+    `<g class="sp"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="1.8"/><path d="M${x + w / 2} ${y}v${h}M${x} ${y + 3.2}h${w}"/></g>`;
+  function sizeScene(large) {
+    if (!large) return `<svg class="ss ss-small" viewBox="0 0 120 50">
+      <path class="ground" d="M14 44h92"/>
+      <g class="man">
+        <circle class="head" cx="56" cy="13" r="3.6"/>
+        <path d="M56 17v13"/><path d="M56 20l7 5M56 20l6 6"/>
+        <path class="leg leg-a" d="M56 30l-5.5 13"/><path class="leg leg-b" d="M56 30l5.5 13"/>
+        ${parcelSvg(60, 18)}
+      </g>
+    </svg>`;
+    return `<svg class="ss ss-large" viewBox="0 -8 120 58">
+      <g class="speed"><path d="M2 22h12M6 28h14M3 34h9"/></g>
+      <path class="ground" d="M14 44h96"/>
+      <g class="ride">
+        <rect class="rack" x="22" y="20" width="30" height="12" rx="3"/>
+        <rect class="stripe" x="26" y="24.5" width="9" height="2.2" rx="1.1"/>
+        ${parcelSvg(22, 8)}${parcelSvg(37, 8)}${parcelSvg(29, -4)}
+        <path class="deck" d="M36 37h58"/>
+        <rect class="seatbox" x="56" y="24" width="20" height="8" rx="4"/>
+        <path class="stem" d="M92 37 87 14M83 14h8"/>
+        <g class="rider"><circle class="head" cx="66" cy="6" r="3.4"/><path d="M65.5 10 63.5 23M63.5 23h8l1.6 8M65 14l20 1"/></g>
+        <g class="wheel-g" style="transform-origin:36px 40px"><circle class="wheel" cx="36" cy="40" r="6"/><path class="spoke" d="M36 35.5v9"/></g>
+        <g class="wheel-g" style="transform-origin:92px 40px"><circle class="wheel" cx="92" cy="40" r="6"/><path class="spoke" d="M92 35.5v9"/></g>
+      </g>
+    </svg>`;
   }
 
   // المحاور

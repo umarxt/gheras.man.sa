@@ -499,9 +499,36 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .size-card input { position: absolute; opacity: 0; pointer-events: none; }
 .size-card.checked { background: var(--sel-bg); border-color: var(--accent); box-shadow: var(--inset); }
 .size-card:focus-within { outline: 3px solid var(--teal); outline-offset: 2px; }
-.size-card h4 { margin: 0 0 8px; font-size: 20px; font-weight: 500; display: flex; align-items: center; gap: 10px; }
+.size-card h4 { margin: 0 0 8px; font-size: 20px; font-weight: 500; }
 .size-card p { margin: 0; color: var(--ink-2); font-size: 15px; line-height: 1.75; }
-.size-ico { width: 30px; height: 30px; flex: none; }
+/* رسمة الحجم */
+.size-scene {
+  display: grid; place-items: center; height: 84px; margin: 0 0 16px; border-radius: 16px;
+  background: var(--bg); box-shadow: var(--inset); overflow: hidden;
+}
+.ss { width: 150px; height: 64px; overflow: visible; direction: ltr; }
+.ss .ground { stroke: var(--line); stroke-width: 1.5; stroke-linecap: round; }
+.ss .man, .ss .rider { fill: none; stroke: var(--ink-2); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.ss .head { fill: var(--teal); stroke: none; filter: drop-shadow(0 0 3px rgba(39, 181, 193, .8)); }
+.ss .sp rect { fill: var(--lime); stroke: none; }
+.ss .sp path { stroke: var(--green); stroke-width: 2.2; fill: none; }
+.ss .leg { transform-origin: 56px 30px; }
+.ss .rack, .ss .seatbox { fill: var(--navy); }
+.ss .stripe { fill: var(--teal); }
+.ss .deck { stroke: var(--ink-2); stroke-width: 4; stroke-linecap: round; }
+.ss .stem { stroke: var(--ink-2); stroke-width: 3; stroke-linecap: round; fill: none; }
+.ss .wheel { fill: #14213A; stroke: var(--line); stroke-width: 1.8; }
+.ss .spoke { stroke: #FFFFFF; stroke-width: 1.6; stroke-linecap: round; }
+.ss .speed { stroke: var(--muted); stroke-width: 2; stroke-linecap: round; opacity: 0; transition: opacity .3s; }
+/* عند التمرير والاختيار تتحرك الرسمة */
+.size-card:hover .ss-small .leg-a, .size-card.checked .ss-small .leg-a { animation: legA .32s ease-in-out infinite alternate; }
+.size-card:hover .ss-small .leg-b, .size-card.checked .ss-small .leg-b { animation: legA .32s ease-in-out infinite alternate-reverse; }
+.size-card:hover .ss-small .sp, .size-card.checked .ss-small .sp { animation: bob .32s ease-in-out infinite alternate; }
+@keyframes bob { to { transform: translateY(-1.2px); } }
+.size-card:hover .ss-large .ride, .size-card.checked .ss-large .ride { animation: idle .14s linear infinite alternate; }
+.size-card.checked .ss-large .wheel-g { animation: spin .5s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.size-card.checked .ss-large .speed { opacity: 1; animation: speed .18s linear infinite; }
 .size-card.bad { border-color: var(--danger); }
 .suggest { margin-top: 14px; font-size: 15px; color: var(--ink); background: var(--well); border-inline-start: 4px solid var(--lime); border-radius: 12px; padding: 12px 16px; }
 .rule-note { margin: 14px 0 0; font-size: 14px; color: var(--muted); }
