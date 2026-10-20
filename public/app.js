@@ -199,7 +199,7 @@
   function stepTitle(i) {
     if (i === 0) return "بيانات المبادرة";
     if (i <= AXES.length) return `المحور ${ORD[i]}: ${AXES[i - 1].title}`;
-    return "المراجعة والإرسال";
+    return "سؤالان ختاميان";
   }
 
   // ——— قواعد الحجم والبرامج الجديدة ———
@@ -253,6 +253,28 @@
     return `<div class="seg" data-seg="${name}" role="radiogroup">${options.map((o) =>
       `<label class="${v === o ? "checked" : ""}"><input type="radio" name="${name}" value="${esc(o)}" ${v === o ? "checked" : ""}>${esc(o)}</label>`).join("")}</div>`;
   }
+  // اختيار متعدد بنفس شكل المقاطع
+  function multi(name, options) {
+    const v = Array.isArray(state.data[name]) ? state.data[name] : state.data[name] ? [state.data[name]] : [];
+    return `<div class="seg" data-multi="${name}" role="group">${options.map((o) =>
+      `<label class="${v.includes(o) ? "checked" : ""}"><input type="checkbox" name="${name}" value="${esc(o)}" ${v.includes(o) ? "checked" : ""}>${esc(o)}</label>`).join("")}</div>`;
+  }
+
+  // اسم البرنامج: خيارات من config.js، ومعها (أخرى) لكتابة اسم غير موجود
+  const PROGRAMS = Array.isArray(CFG.PROGRAMS) ? CFG.PROGRAMS.filter(Boolean) : [];
+  function programField() {
+    if (!PROGRAMS.length) return inp("program", "اسم البرنامج", { req: true });
+    const d = state.data;
+    return `<div class="field"><span class="field-label">اسم البرنامج<span class="req">*</span></span>
+      ${seg("programChoice", PROGRAMS.concat(["أخرى"]))}
+      ${d.programChoice === "أخرى" ? `<input class="input" data-field="programOther" id="f_programOther" placeholder="اكتب اسم البرنامج" value="${esc(d.programOther || "")}" aria-label="اسم البرنامج">` : ""}
+    </div>`;
+  }
+  function syncProgram() {
+    const d = state.data;
+    if (PROGRAMS.length) d.program = d.programChoice === "أخرى" ? String(d.programOther || "").trim() : d.programChoice || "";
+  }
+
   function inp(name, label, { type = "text", req = false, ph = "", dir = "", min = "" } = {}) {
     return `<div class="field"><label for="f_${name}">${label}${req ? '<span class="req">*</span>' : ""}</label>
       <input class="input" id="f_${name}" name="${name}" type="${type}" ${dir ? `dir="${dir}"` : ""} ${min !== "" ? `min="${min}"` : ""} ${type === "number" ? 'inputmode="decimal"' : ""} placeholder="${esc(ph)}" value="${esc(state.data[name] || "")}" data-field="${name}"></div>`;
@@ -274,14 +296,15 @@
       <div class="step-hero"><div>
         <p class="eyebrow">قبل المحاور</p>
         <h1>بيانات المبادرة</h1>
-        <p class="lead">عن آخر دورة منفذة من البرنامج</p>
+        <p class="lead">يعبأ هذا النموذج عن آخر دورة منفذة منه</p>
       </div></div>
       <div class="band" aria-hidden="true"></div>
       <div class="step-body">
         <div class="card"><h2 class="card-title">البرنامج والدورة</h2>
           <div class="grid">
-            ${inp("program", "اسم البرنامج", { req: true })}
-            ${inp("season", "الدورة محل التقييم: الفصل أو الموسم", { req: true })}
+            ${programField()}
+            <div class="field"><span class="field-label">الدورة محل التقييم<span class="req">*</span></span>
+              ${seg("season", ["فصلية", "سنوية"])}</div>
             <div class="grid grid-2">
               ${inp("startDate", "تاريخ البداية", { type: "date" })}
               ${inp("endDate", "تاريخ النهاية", { type: "date" })}
@@ -296,8 +319,8 @@
 
         <div class="card"><h2 class="card-title">المستفيد</h2>
           <div class="grid">
-            <div class="field"><span class="field-label">المستفيد<span class="req">*</span></span>
-              ${seg("beneficiary", ["طفل", "عامل مع الطفل", "جهة عاملة مع الطفل"])}</div>
+            <div class="field"><span class="field-label">المستفيد<span class="req">*</span> <small class="hint" style="display:inline">يمكن اختيار أكثر من واحد</small></span>
+              ${multi("beneficiary", ["طفل", "عامل مع الطفل", "جهة عاملة مع الطفل"])}</div>
             <div class="grid grid-3">
               ${inp("age", "العمر", { ph: "مثال: ٨–١٢ سنة" })}
               <div class="field"><span class="field-label">الجنس</span>${seg("gender", ["ذكور", "إناث", "الجنسان"])}</div>
@@ -448,33 +471,17 @@
     $(`#q_${id}`)?.classList.remove("missing");
   }
 
-  // المراجعة
-  function ring(done, total) {
-    const r = 14, c = 2 * Math.PI * r, off = c * (1 - (total ? done / total : 0));
-    return `<svg class="ring" viewBox="0 0 34 34" aria-hidden="true"><circle class="bg" cx="17" cy="17" r="${r}"/><circle class="fg" cx="17" cy="17" r="${r}" stroke-dasharray="${c}" stroke-dashoffset="${off}"/></svg>`;
-  }
-
+  // الصفحة الأخيرة: السؤالان الختاميان فقط
   function tplReview() {
-    const d = state.data;
     return `<div class="wrap">
       <div class="step-hero"><div>
         <p class="eyebrow">الخطوة الأخيرة</p>
-        <h1>المراجعة والإرسال</h1>
-        <p class="lead">${esc(d.program || "")}${d.season ? " — " + esc(d.season) : ""}${d.size ? " · مبادرة " + esc(d.size) : ""}</p>
+        <h1>سؤالان ختاميان</h1>
+        <p class="lead">اختياريان، ثم أرسل التقييم</p>
       </div></div>
       <div class="band" aria-hidden="true"></div>
       <div class="step-body">
-        <div class="review-grid">
-          <button type="button" class="review-row" data-goto="0">
-            <span class="rr-t">بيانات المبادرة</span><span class="rr-c">${d.program ? "مكتملة" : "ناقصة"}</span>${ring(d.program ? 1 : 0, 1)}</button>
-          ${AXES.map((a, i) => {
-            const done = a.questions.filter((q) => state.answers[qid(a, q)]).length;
-            return `<button type="button" class="review-row" data-goto="${i + 1}">
-              <span class="rr-t">المحور ${ORD[a.n]}: ${esc(a.title)}</span>
-              <span class="rr-c">${toAr(done)} من ${toAr(a.questions.length)}</span>${ring(done, a.questions.length)}</button>`;
-          }).join("")}
-        </div>
-        <div class="card"><h2 class="card-title">سؤالان ختاميان مفتوحان <span class="hint" style="display:inline">(اختياريان)</span></h2>
+        <div class="card">
           <div class="grid">
             <div class="field"><label for="openGood">ما الذي نجح في المبادرة ويستحق التعميم؟</label>
               <textarea class="textarea" id="openGood" data-open="good">${esc(state.open.good)}</textarea></div>
@@ -491,8 +498,11 @@
   function validateData() {
     const d = state.data;
     const bad = [];
-    ["program", "season", "manager"].forEach((k) => { if (!String(d[k] || "").trim()) bad.push($(`[data-field="${k}"]`)); });
-    ["hasPrev", "beneficiary", "filler"].forEach((k) => { if (!d[k]) bad.push($(`[data-seg="${k}"]`)); });
+    syncProgram();
+    if (!String(d.program || "").trim()) bad.push(PROGRAMS.length ? (d.programChoice === "أخرى" ? $('[data-field="programOther"]') : $('[data-seg="programChoice"]')) : $('[data-field="program"]'));
+    ["manager"].forEach((k) => { if (!String(d[k] || "").trim()) bad.push($(`[data-field="${k}"]`)); });
+    ["season", "hasPrev", "filler"].forEach((k) => { if (!d[k]) bad.push($(`[data-seg="${k}"]`)); });
+    if (!benefList().length) bad.push($('[data-multi="beneficiary"]'));
     if (!d.size) bad.push($("[data-sizegroup]"));
     $$(".bad").forEach((e) => e.classList.remove("bad"));
     $$(".size-card").forEach((e) => e.classList.remove("bad"));
@@ -509,6 +519,8 @@
     if (bad[0]) bad[0].scrollIntoView({ behavior: "smooth", block: "center" });
     return !bad.length;
   }
+
+  const benefList = () => (Array.isArray(state.data.beneficiary) ? state.data.beneficiary : state.data.beneficiary ? [state.data.beneficiary] : []);
 
   function questionProblem(id) {
     const a = state.answers[id];
@@ -533,7 +545,8 @@
 
   function firstInvalidStep() {
     const d = state.data;
-    if (!d.program || !d.season || !d.manager || !d.hasPrev || !d.beneficiary || !d.filler || !d.size) return 0;
+    syncProgram();
+    if (!d.program || !d.season || !d.manager || !d.hasPrev || !benefList().length || !d.filler || !d.size) return 0;
     for (let i = 0; i < AXES.length; i++) {
       if (AXES[i].questions.some((q) => questionProblem(qid(AXES[i], q)))) return i + 1;
     }
@@ -601,7 +614,9 @@
       Object.entries(state.answers).forEach(([id, a]) => {
         answers[id] = { c: a.c, ev: a.c === "أ" ? a.ev || "" : "", link: a.c === "أ" ? a.link || "" : "", files: a.c === "أ" ? uploaded[id] || [] : [], reason: a.c === "NA" ? a.reason || "" : "" };
       });
-      const r = await api({ action: "submit", code, data: state.data, answers, open: state.open, startedAt: state.startedAt });
+      const data = { ...state.data, beneficiary: benefList().join("، ") };
+      delete data.programChoice; delete data.programOther;
+      const r = await api({ action: "submit", code, data, answers, open: state.open, startedAt: state.startedAt });
       if (!r.ok) throw new Error(r.error || "تعذر الإرسال");
       overlay(true, "تم", 100);
       clearDraft();
@@ -649,9 +664,17 @@
       $$("label", group).forEach((l) => l.classList.toggle("checked", l.querySelector("input").checked));
       group.classList.remove("bad");
       $$(".size-card", group).forEach((c) => c.classList.remove("bad"));
-      if (t.name === "donor") { renderStep(); }
+      if (t.name === "donor" || t.name === "programChoice") { syncProgram(); renderStep(); }
       if (["size", "hasPrev"].includes(t.name)) applyRules();
       if (["donor", "donorReports", "size"].includes(t.name)) { const s = $("#sizeSuggest"); if (s) s.innerHTML = sizeSuggestion(); }
+      saveDraft();
+      return;
+    }
+    if (t.type === "checkbox" && t.closest("[data-multi]")) {
+      const group = t.closest("[data-multi]");
+      state.data[group.dataset.multi] = $$("input:checked", group).map((x) => x.value);
+      $$("label", group).forEach((l) => l.classList.toggle("checked", l.querySelector("input").checked));
+      group.classList.remove("bad");
       saveDraft();
       return;
     }
@@ -677,6 +700,7 @@
     const t = e.target;
     if (t.dataset.field) {
       state.data[t.dataset.field] = t.value;
+      if (t.dataset.field === "programOther") syncProgram();
       t.classList.remove("bad");
       if (["weeks", "cost"].includes(t.dataset.field)) { const s = $("#sizeSuggest"); if (s) s.innerHTML = sizeSuggestion(); }
     } else if (t.dataset.ev) { (state.answers[t.dataset.ev] ||= {}).ev = t.value; $(`#q_${t.dataset.ev}`).classList.remove("missing"); }
