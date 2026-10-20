@@ -77,15 +77,17 @@
     if (!el) return;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const r = el.getBoundingClientRect();
-    light = { el, x: r.width / 2, y: r.height * 0.3, tx: r.width / 2, ty: r.height * 0.3, last: 0, raf: 0, t0: performance.now() };
+    light = { el, x: r.width * 0.3, y: r.height * 0.42, tx: r.width * 0.3, ty: r.height * 0.42, last: 0, raf: 0, t0: performance.now() };
     const logo = $(".stage-logo", el);
     const tick = (now) => {
       if (!light || light.el !== el) return;
       const rect = el.getBoundingClientRect();
       if (now - light.last > 2600 && !reduce) { // لا مؤشر: تتجول الإضاءة ببطء حول الشعار
         const t = (now - light.t0) / 1000;
-        light.tx = rect.width / 2 + Math.sin(t * 0.45) * Math.min(260, rect.width * 0.32);
-        light.ty = rect.height * 0.3 + Math.sin(t * 0.7) * 90;
+        // على الشاشات العريضة تتجول في المساحة اليسرى، وعلى الجوال حول النص
+        const wide = rect.width > 760;
+        light.tx = rect.width * (wide ? 0.3 : 0.5) + Math.sin(t * 0.45) * Math.min(220, rect.width * (wide ? 0.18 : 0.32));
+        light.ty = rect.height * (wide ? 0.45 : 0.32) + Math.sin(t * 0.7) * 110;
       }
       light.x += (light.tx - light.x) * 0.08;
       light.y += (light.ty - light.y) * 0.08;

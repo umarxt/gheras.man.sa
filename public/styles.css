@@ -155,10 +155,10 @@ button, input, textarea { font: inherit; color: inherit; }
   --mx: 50%; --my: 32%;
   position: relative; overflow: hidden; isolation: isolate;
   min-height: 100svh;
-  display: grid; place-items: center; text-align: center;
+  display: grid; align-items: center; justify-items: center; text-align: start;
   padding: 72px var(--gutter) 96px;
   color: #FFFFFF;
-  background: radial-gradient(130% 95% at 50% 0%, var(--stage-a) 0%, #153563 42%, var(--stage-b) 100%);
+  background: radial-gradient(120% 100% at 100% 0%, var(--stage-a) 0%, #153563 45%, var(--stage-b) 100%);
 }
 .stage::before { /* الإضاءة التي تتبع المؤشر */
   content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
@@ -173,9 +173,10 @@ button, input, textarea { font: inherit; color: inherit; }
   mask-image: radial-gradient(circle 230px at var(--mx) var(--my), #000 0%, rgba(0, 0, 0, .45) 38%, transparent 72%);
   opacity: .9;
 }
-.stage-inner { position: relative; max-width: 640px; width: 100%; animation: rise .9s var(--ease-out) both; }
+.stage-inner { position: relative; width: min(1080px, 100%); display: grid; justify-items: start; animation: rise .9s var(--ease-out) both; }
+.stage-inner > * { max-width: 480px; }
 @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
-.stage-logo { position: relative; width: 200px; margin: 0 auto 34px; }
+.stage-logo { position: relative; width: 150px; margin: 0 0 56px; }
 .stage-logo img { position: relative; width: 100%; }
 .halo {
   position: absolute; width: 180px; height: 180px; border-radius: 50%;
@@ -186,15 +187,13 @@ button, input, textarea { font: inherit; color: inherit; }
   transition: transform .2s linear;
 }
 .stage-kicker {
-  display: flex; align-items: center; justify-content: center; gap: 14px;
-  margin: 0 0 10px; font-size: clamp(15px, 1.8vw, 18px); color: var(--teal);
+  display: flex; align-items: center; gap: 12px;
+  margin: 0 0 6px; font-size: clamp(15px, 1.7vw, 17px); color: var(--teal);
 }
-.stage-kicker::before, .stage-kicker::after {
-  content: ""; width: 34px; height: 1px; background: rgba(39, 181, 193, .55);
-}
-.stage-title { font-size: clamp(34px, 5.4vw, 54px); line-height: 1.2; margin: 0 0 16px; font-weight: 500; color: #FFFFFF; }
-.stage-sub { margin: 0 auto; max-width: 34ch; font-size: clamp(14px, 1.6vw, 16px); line-height: 1.8; color: rgba(255, 255, 255, .6); }
-.gate-form { margin: 40px auto 0; max-width: 380px; }
+.stage-kicker::before { content: ""; width: 28px; height: 2px; border-radius: 2px; background: var(--teal); }
+.stage-title { font-size: clamp(36px, 5vw, 52px); line-height: 1.25; margin: 0 0 14px; font-weight: 500; color: #FFFFFF; }
+.stage-sub { margin: 0; max-width: 34ch; font-size: clamp(14px, 1.6vw, 16px); line-height: 1.8; color: rgba(255, 255, 255, .6); }
+.gate-form { margin: 38px 0 0; width: min(380px, 100%); }
 .code-well {
   display: flex; align-items: center; gap: 6px; padding: 6px;
   background: rgba(6, 16, 34, .55);
@@ -206,7 +205,7 @@ button, input, textarea { font: inherit; color: inherit; }
 .code-well:focus-within { border-color: rgba(39, 181, 193, .7); box-shadow: inset 0 2px 8px rgba(0, 0, 0, .45), 0 0 0 4px rgba(39, 181, 193, .18), 0 0 32px rgba(39, 181, 193, .25); }
 .code-well input {
   flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: #FFFFFF;
-  font-size: 18px; padding: 10px 18px; text-align: center; letter-spacing: .08em;
+  font-size: 18px; padding: 10px 18px; text-align: start; letter-spacing: .08em;
 }
 .code-well input::placeholder { color: rgba(255, 255, 255, .5); letter-spacing: 0; }
 .code-go {
@@ -220,11 +219,11 @@ button, input, textarea { font: inherit; color: inherit; }
 .form-msg { min-height: 26px; margin: 12px 0 0; font-size: 15px; color: #FFB4AE; }
 .stage.shake .code-well { animation: shake .45s; }
 @keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
-.done-mark { width: 104px; height: 104px; margin: 0 auto 26px; }
+.done-mark { width: 84px; height: 84px; margin: 0 0 30px; }
 .done-mark circle { stroke: var(--teal); stroke-dasharray: 340; stroke-dashoffset: 340; animation: draw 1s var(--ease-out) forwards; }
 .done-mark path { stroke: var(--green); stroke-dasharray: 80; stroke-dashoffset: 80; animation: draw .6s .7s var(--ease-out) forwards; }
 @keyframes draw { to { stroke-dashoffset: 0; } }
-.ref { color: rgba(255, 255, 255, .6); font-size: 15px; margin: 22px 0 30px; }
+.ref { color: rgba(255, 255, 255, .6); font-size: 15px; margin: 18px 0 28px; }
 .ref bdi { color: #FFFFFF; letter-spacing: .04em; }
 .btn-onstage { background: transparent; color: #FFFFFF; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .45); }
 .btn-onstage:hover { box-shadow: inset 0 0 0 1.5px var(--teal), 0 0 24px rgba(39, 181, 193, .3); }
