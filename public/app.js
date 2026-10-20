@@ -413,32 +413,23 @@
     </div>`;
   }
 
-  // رسمة الحجم بنفس أسلوب مشهد التوصيل: الصغيرة شخص يحمل طردا واحدا، والكبيرة مندوب بسكوتر محمل بعدة طرود
-  const parcelSvg = (x, y, w = 13, h = 11) =>
-    `<g class="sp"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="1.8"/><path d="M${x + w / 2} ${y}v${h}M${x} ${y + 3.2}h${w}"/></g>`;
+  // رسمة الحجم: غرسة صغيرة للمبادرة الصغيرة، وشجرة مكتملة للكبيرة
   function sizeScene(large) {
-    if (!large) return `<svg class="ss ss-small" viewBox="0 0 120 50">
-      <path class="ground" d="M14 44h92"/>
-      <g class="man">
-        <circle class="head" cx="56" cy="13" r="3.6"/>
-        <path d="M56 17v13"/><path d="M56 20l7 5M56 20l6 6"/>
-        <path class="leg leg-a" d="M56 30l-5.5 13"/><path class="leg leg-b" d="M56 30l5.5 13"/>
-        ${parcelSvg(60, 18)}
+    if (!large) return `<svg class="ss ss-small" viewBox="0 0 80 60">
+      <path class="ground" d="M22 52h36"/>
+      <g class="sway" style="transform-origin:40px 52px">
+        <path class="trunk" d="M40 52V33"/>
+        <path class="leaf leaf-l" d="M40 38c-3-8-10-11-17-10 1 7 7 12 17 10Z"/>
+        <path class="leaf leaf-r" d="M40 33c2-9 9-13 17-12-1 8-7 13-17 12Z"/>
       </g>
     </svg>`;
-    return `<svg class="ss ss-large" viewBox="0 -8 120 58">
-      <g class="speed"><path d="M2 22h12M6 28h14M3 34h9"/></g>
-      <path class="ground" d="M14 44h96"/>
-      <g class="ride">
-        <rect class="rack" x="22" y="20" width="30" height="12" rx="3"/>
-        <rect class="stripe" x="26" y="24.5" width="9" height="2.2" rx="1.1"/>
-        ${parcelSvg(22, 8)}${parcelSvg(37, 8)}${parcelSvg(29, -4)}
-        <path class="deck" d="M36 37h58"/>
-        <rect class="seatbox" x="56" y="24" width="20" height="8" rx="4"/>
-        <path class="stem" d="M92 37 87 14M83 14h8"/>
-        <g class="rider"><circle class="head" cx="66" cy="6" r="3.4"/><path d="M65.5 10 63.5 23M63.5 23h8l1.6 8M65 14l20 1"/></g>
-        <g class="wheel-g" style="transform-origin:36px 40px"><circle class="wheel" cx="36" cy="40" r="6"/><path class="spoke" d="M36 35.5v9"/></g>
-        <g class="wheel-g" style="transform-origin:92px 40px"><circle class="wheel" cx="92" cy="40" r="6"/><path class="spoke" d="M92 35.5v9"/></g>
+    return `<svg class="ss ss-large" viewBox="0 0 80 60">
+      <path class="ground" d="M14 54h52"/>
+      <path class="trunk" d="M40 54V30M40 41l-7-6M40 37l6-5"/>
+      <g class="sway" style="transform-origin:40px 40px">
+        <circle class="c-lime" cx="27" cy="26" r="11"/>
+        <circle class="c-teal" cx="53" cy="25" r="11"/>
+        <circle class="c-green" cx="40" cy="17" r="14"/>
       </g>
     </svg>`;
   }
