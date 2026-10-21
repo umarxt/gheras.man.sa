@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0D2142">
+  <meta name="robots" content="noindex, nofollow">
+  <title>واجهة غراس — نموذج تطبيقي</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-64.png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="preload" href="assets/fonts/din-next-arabic.woff2" as="font" type="font/woff2" crossorigin>
+  <script>
+    // تطبيق الوضع المحفوظ قبل الرسم لتجنب الوميض
+    try { var t = localStorage.getItem("gheras-theme"); if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t); } catch (e) {}
+  </script>
+  <link rel="stylesheet" href="kit.css">
+</head>
+<body>
+
+  <!-- الشريط العلوي -->
+  <header class="topbar" id="topbar" hidden>
+    <div class="topbar-inner">
+      <img class="topbar-logo logo-color" src="assets/logo.png" alt="غراس">
+      <img class="topbar-logo logo-white" src="assets/logo-white.png" alt="" aria-hidden="true">
+      <div class="topbar-title" id="topbarTitle"></div>
+      <div class="topbar-end">
+        <span class="topbar-save" id="saveState" aria-live="polite"></span>
+        <button class="tt" id="themeToggle" type="button" aria-label="الوضع الليلي" aria-pressed="false">
+          <span class="tt-hole" aria-hidden="true"></span>
+          <svg class="tt-man" viewBox="0 0 12 22" aria-hidden="true">
+            <circle cx="6" cy="3.2" r="2.6"/>
+            <path class="tt-body" d="M6 6v7.5"/>
+            <path class="tt-arm" d="M6 8.5 3 11.5M6 8.5l3 3"/>
+            <path class="tt-leg tt-leg-a" d="M6 13.5 3.6 20"/>
+            <path class="tt-leg tt-leg-b" d="M6 13.5 8.4 20"/>
+          </svg>
+          <span class="tt-knob" aria-hidden="true">
+            <svg class="tt-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.6"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5.3 5.3 7 7M17 17l1.7 1.7M5.3 18.7 7 17M17 7l1.7-1.7"/></svg>
+            <svg class="tt-moon" viewBox="0 0 24 24"><path d="M20 14.6A8.2 8.2 0 0 1 9.4 4a8.2 8.2 0 1 0 10.6 10.6Z"/></svg>
+          </span>
+        </button>
+      </div>
+    </div>
+    <div class="progress" aria-hidden="true"><span id="progressFill"></span></div>
+  </header>
+
+  <main id="app">
+
+    <!-- الدخول -->
+    <section class="screen stage" id="screenGate">
+      <div class="stage-light" aria-hidden="true"></div>
+      <div class="stage-inner">
+        <div class="stage-logo">
+          <span class="halo" aria-hidden="true"></span>
+          <img src="assets/logo-white.png" alt="جمعية غراس لتنمية الطفل">
+        </div>
+        <div class="login-card" id="loginCard">
+          <p class="stage-kicker">عنوان صغير</p>
+          <h1 class="stage-title">اسم الموقع</h1>
+          <p class="stage-sub">سطر يشرح الموقع باختصار (رمز التجربة: 1234)</p>
+          <form class="gate-form" id="gateForm" autocomplete="off" novalidate>
+            <label class="login-label" for="accessCode">رمز الدخول</label>
+            <div class="code-well" id="codeWell">
+              <input id="accessCode" type="password" placeholder="أدخل الرمز" required>
+              <!-- رجل الدفتر: يرفع دفتره عند التركيز ويكتب مع كل حرف -->
+              <svg class="note-man" id="noteMan" viewBox="0 0 22 30" aria-hidden="true">
+                <circle class="head" cx="9" cy="4" r="3.2"/>
+                <path d="M9 7.5V18"/>
+                <path class="arm-back" d="M9 10 6 15"/>
+                <g class="arm-note"><path d="M9 10l5 3.5"/><rect class="notebook" x="13" y="9.5" width="6" height="8" rx="1"/><path class="pen" d="M15 12.5h2.5M15 14.5h2"/></g>
+                <path class="leg" d="M9 18 6.5 27"/><path class="leg" d="M9 18l2.5 9"/>
+              </svg>
+            </div>
+            <button type="submit" class="portal-btn" id="portalBtn">
+              <span class="btn-label" id="btnLabel"><i class="dot"></i><span id="btnText">دخول</span></span>
+              <span class="portal-scene" aria-hidden="true">
+                <span class="ground"></span>
+                <span class="door"><span class="door-light"></span><span class="door-panel"><i></i></span></span>
+                <svg class="walker" id="walker" viewBox="0 0 16 30">
+                  <circle class="head" cx="8" cy="4" r="3.2"/>
+                  <path d="M8 7.5V18"/><path class="arm arm-a" d="M8 10 5.5 15.5"/><path class="arm arm-b" d="M8 10l2.5 5.5"/>
+                  <path class="leg leg-a" d="M8 18 5 27"/><path class="leg leg-b" d="M8 18l3 9"/>
+                </svg>
+              </span>
+            </button>
+            <p class="portal-caption" id="portalCaption">اضغط للدخول</p>
+            <p class="form-msg" id="gateMsg" role="alert"></p>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- خطوات النموذج -->
+    <!-- صفحة المحتوى: كل مكونات الواجهة -->
+    <section class="screen steps" id="screenSteps" hidden>
+      <div id="stepHost">
+        <div class="wrap step">
+          <div class="step-hero">
+            <div>
+              <p class="eyebrow">القسم الأول من ثلاثة</p>
+              <h1>عنوان الصفحة</h1>
+              <p class="lead">سطر تمهيدي قصير يشرح محتوى هذه الصفحة</p>
+              <nav class="qmap" aria-label="أقسام الصفحة">
+                <button type="button" class="done" data-jump="c1">١</button>
+                <button type="button" data-jump="c2">٢</button>
+                <button type="button" data-jump="c3">٣</button>
+              </nav>
+            </div>
+            <div class="axis-num" aria-hidden="true">١</div>
+          </div>
+          <div class="band" aria-hidden="true"></div>
+          <div class="step-body">
+
+            <div class="safety-note">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.5 4 5.5v6c0 5 3.4 9 8 10.5 4.6-1.5 8-5.5 8-10.5v-6l-8-3Z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>
+              <span>ملاحظة مهمة بإطار فيروزي، للتنبيهات والإرشادات.</span>
+            </div>
+
+            <div class="card" id="c1"><h2 class="card-title">حقول الإدخال</h2>
+              <div class="grid">
+                <div class="field"><label for="f1">حقل نصي<span class="req">*</span></label><input class="input" id="f1" placeholder="اكتب هنا"></div>
+                <div class="grid grid-2">
+                  <div class="field"><label for="f2">تاريخ</label><input class="input" id="f2" type="date"></div>
+                  <div class="field"><label for="f3">رقم</label><input class="input" id="f3" type="number" inputmode="decimal"></div>
+                </div>
+                <div class="field"><label for="f4">نص طويل</label><textarea class="textarea" id="f4"></textarea></div>
+                <div class="field"><span class="field-label">اختيار واحد (مقاطع)</span>
+                  <div class="seg" role="radiogroup">
+                    <label><input type="radio" name="segA" value="الأول">الأول</label>
+                    <label><input type="radio" name="segA" value="الثاني">الثاني</label>
+                    <label><input type="radio" name="segA" value="الثالث">الثالث</label>
+                  </div></div>
+                <div class="field"><span class="field-label">اختيار متعدد <small class="hint" style="display:inline">يمكن اختيار أكثر من واحد</small></span>
+                  <div class="seg" role="group">
+                    <label><input type="checkbox" name="multiA" value="أ">خيار أ</label>
+                    <label><input type="checkbox" name="multiA" value="ب">خيار ب</label>
+                    <label><input type="checkbox" name="multiA" value="ج">خيار ج</label>
+                  </div></div>
+              </div>
+            </div>
+
+            <div class="card" id="c2"><h2 class="card-title">بطاقات اختيار برسمة</h2>
+              <div class="size-cards" role="radiogroup">
+                <label class="size-card"><input type="radio" name="sizeA" value="صغير">
+                  <span class="size-scene" aria-hidden="true"><svg class="ss ss-small" viewBox="0 0 80 60"><path class="ground" d="M22 52h36"/><g class="sway" style="transform-origin:40px 52px"><path class="trunk" d="M40 52V33"/><path class="leaf leaf-l" d="M40 38c-3-8-10-11-17-10 1 7 7 12 17 10Z"/><path class="leaf leaf-r" d="M40 33c2-9 9-13 17-12-1 8-7 13-17 12Z"/></g></svg></span>
+                  <h4>خيار صغير</h4><p>وصف قصير للخيار الأول يشرح متى يُختار.</p></label>
+                <label class="size-card"><input type="radio" name="sizeA" value="كبير">
+                  <span class="size-scene" aria-hidden="true"><svg class="ss ss-large" viewBox="0 0 80 60"><path class="ground" d="M14 54h52"/><path class="trunk" d="M40 54V30M40 41l-7-6M40 37l6-5"/><g class="sway" style="transform-origin:40px 40px"><circle class="c-lime" cx="27" cy="26" r="11"/><circle class="c-teal" cx="53" cy="25" r="11"/><circle class="c-green" cx="40" cy="17" r="14"/></g></svg></span>
+                  <h4>خيار كبير</h4><p>وصف قصير للخيار الثاني يشرح متى يُختار.</p></label>
+              </div>
+            </div>
+
+            <section class="q" id="c3">
+              <div class="q-head"><span class="q-num">١-٣</span><h3 class="q-text">سؤال بخيارات وصفية؟</h3></div>
+              <p class="q-note">ملاحظة توضيحية تحت السؤال</p>
+              <ul class="opts" role="radiogroup" aria-label="سؤال بخيارات وصفية">
+                <li><label class="opt"><input type="radio" name="q1" value="أ"><span class="opt-letter">أ</span><span class="opt-text">الوصف الأكمل، ويفتح حقل الشاهد</span></label></li>
+                <li><label class="opt"><input type="radio" name="q1" value="ب"><span class="opt-letter">ب</span><span class="opt-text">وصف متوسط</span></label></li>
+                <li><label class="opt"><input type="radio" name="q1" value="ج"><span class="opt-letter">ج</span><span class="opt-text">لم يتحقق</span></label></li>
+                <li><label class="opt na"><input type="radio" name="q1" value="NA"><span class="opt-letter">—</span><span class="opt-text">لا ينطبق</span></label></li>
+              </ul>
+              <div class="extra" data-show-when="q1=أ"><div><div class="extra-in">
+                <span class="extra-label">الشاهد / الدليل <small>اكتب وصفه أو أرفق ملفا</small></span>
+                <textarea class="textarea" aria-label="الشاهد"></textarea>
+                <label class="drop"><svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0-4.5 4.5M12 4l4.5 4.5M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>اسحب الملف هنا أو اضغط للاختيار</span><input type="file" hidden></label>
+              </div></div></div>
+              <div class="extra" data-show-when="q1=NA"><div><div class="extra-in">
+                <span class="extra-label">سبب عدم الانطباق</span>
+                <input class="input" placeholder="اذكر السبب" aria-label="السبب">
+              </div></div></div>
+            </section>
+
+            <div class="review-grid" id="reviewDemo"></div>
+            <p class="fine">اضغط «إرسال» في الشريط السفلي لتجربة مشهد التوصيل.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- الخاتمة -->
+    <section class="screen stage" id="screenDone" hidden>
+      <div class="stage-light" aria-hidden="true"></div>
+      <div class="stage-inner">
+        <svg class="done-mark" viewBox="0 0 120 120" aria-hidden="true">
+          <circle cx="60" cy="60" r="54" fill="none" stroke-width="5"/>
+          <path d="M38 62 L54 78 L84 46" fill="none" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <p class="stage-kicker">وصل التقييم</p>
+        <h1 class="stage-title">شكرا لك</h1>
+        <p class="stage-sub">رسالة ختامية قصيرة</p>
+        <p class="ref" id="doneRef"></p>
+        <button class="btn btn-onstage" id="newBtn" type="button">رجوع</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- شريط التنقل السفلي -->
+  <nav class="dock" id="dock" hidden>
+    <div class="dock-inner">
+      <button class="btn btn-ghost" id="prevBtn" type="button">السابق</button>
+      <div class="dock-count" id="dockCount"></div>
+      <button class="btn btn-primary" id="nextBtn" type="button">إرسال</button>
+    </div>
+  </nav>
+
+  <!-- نافذة الإرسال: مشهد التوصيل -->
+  <div class="overlay" id="overlay" hidden>
+    <div class="courier-wrap" role="status" aria-live="polite">
+      <div class="courier-pill" id="courierPill">
+        <span class="btn-label"><i class="dot"></i><span>إرسال</span></span>
+        <div class="courier-scene" aria-hidden="true">
+          <span class="ground"></span>
+          <svg class="sender" id="sender" viewBox="0 0 16 30">
+            <circle class="head" cx="8" cy="4" r="3.2"/>
+            <path d="M8 7.5V18"/>
+            <path class="arm arm-r" d="M8 10.5 12 14"/><path class="arm arm-l" d="M8 10.5 4.5 15"/>
+            <path class="leg leg-a" d="M8 18 5 27"/><path class="leg leg-b" d="M8 18l3 9"/>
+          </svg>
+          <span class="parcel" id="parcel"><i></i></span>
+          <div class="scooter" id="scooter">
+            <span class="speed"><i></i><i></i><i></i></span>
+            <svg viewBox="0 0 120 54">
+              <rect class="rack" x="6" y="22" width="34" height="14" rx="3"/>
+              <rect class="stripe" x="10" y="27" width="10" height="2.4" rx="1.2"/>
+              <path class="deck" d="M24 41h70"/>
+              <rect class="seatbox" x="44" y="27" width="24" height="9" rx="4.5"/>
+              <path class="body" d="M66 36c8 0 14-1 20-6"/>
+              <rect class="lamp" x="62" y="31" width="13" height="4" rx="2"/>
+              <path class="stem" d="M94 41 88 14M84 14h8"/>
+              <g class="rider">
+                <circle class="head" cx="58" cy="7" r="3.6"/>
+                <path d="M57.5 11 55 26"/>
+                <path d="M55 26h9l2 9"/>
+                <path d="M57 15 87 15"/>
+                <path class="rider-wave" d="M57 13.5l7-7"/>
+              </g>
+              <circle class="wheel" cx="22" cy="44" r="7"/><circle class="hub" cx="22" cy="44" r="2.4"/>
+              <circle class="wheel" cx="96" cy="44" r="7"/><circle class="hub" cx="96" cy="44" r="2.4"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <p class="courier-label" id="overlayText">جار الإرسال…</p>
+      <div class="bar" id="courierBar"><span id="overlayBar"></span></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <footer class="footer" id="footer">
+    <div class="footer-inner">
+      <div class="footer-text">
+        <strong>جمعية غراس لتنمية الطفل</strong>
+        <span>المملكة العربية السعودية — جمعية مسجلة بالمركز الوطني لتنمية القطاع غير الربحي، ترخيص رقم: ١١٩٨</span>
+        <span>الرياض – السويدي الغربي</span>
+      </div>
+      <div class="footer-links">
+        <a href="tel:0555432555" dir="ltr">0555432555</a>
+        <a href="mailto:info@Gheras.sa" dir="ltr">info@Gheras.sa</a>
+        <a href="https://www.Gheras.sa" target="_blank" rel="noopener" dir="ltr">www.Gheras.sa</a>
+        <a href="https://x.com/GherasSA" target="_blank" rel="noopener" dir="ltr">@GherasSA</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="kit.js"></script>
+  <script>
+    // ربط تجريبي يوضح طريقة استخدام GherasKit
+    (function () {
+      const K = GherasKit, $ = K.$;
+      function show(id) {
+        ["screenGate", "screenSteps", "screenDone"].forEach((s) => ($("#" + s).hidden = s !== id));
+        const inApp = id === "screenSteps";
+        $("#topbar").hidden = $("#dock").hidden = !inApp;
+        document.body.classList.toggle("stage-mode", !inApp);
+        window.scrollTo(0, 0);
+        inApp ? K.stage.stop() : K.stage.start($("#" + id));
+      }
+      K.theme.init();
+      K.bindChoices($("#stepHost"));
+      $("#reviewDemo").innerHTML = [["القسم الأول", 3, 3], ["القسم الثاني", 1, 4], ["القسم الثالث", 0, 2]].map(([t, d, n]) =>
+        `<button type="button" class="review-row"><span class="rr-t">${t}</span><span class="rr-c">${K.toAr(d)} من ${K.toAr(n)}</span>${K.ring(d, n)}</button>`).join("");
+      $("#stepHost").addEventListener("click", (e) => {
+        const j = e.target.closest("[data-jump]");
+        if (j) document.getElementById(j.dataset.jump).scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+      K.portalGate({
+        verify: async (code) => { await K.wait(300); return code === "1234" ? { ok: true } : { ok: false, error: "رمز الدخول غير صحيح" }; },
+        onEnter: () => { $("#topbarTitle").textContent = "عنوان الصفحة"; $("#progressFill").style.width = "33%"; show("screenSteps"); }
+      });
+      $("#nextBtn").addEventListener("click", async () => {
+        K.courier.start("جار الإرسال…");
+        K.courier.creep(0, 90);
+        await K.wait(2500);             // مكان طلب الشبكة الحقيقي
+        await K.courier.finish("تم الإرسال");
+        $("#doneRef").innerHTML = 'رقم المرجع: <bdi dir="ltr">DEMO-001</bdi>';
+        show("screenDone");
+        K.courier.hide();
+      });
+      $("#prevBtn").addEventListener("click", () => K.toast("زر السابق"));
+      $("#newBtn").addEventListener("click", () => show("screenSteps"));
+      show("screenGate");
+    })();
+  </script>
+</body>
+</html>
