@@ -59,11 +59,19 @@
           <img src="/assets/logo-white.png" alt="جمعية غراس لتنمية الطفل">
         </div>
         <div class="login-card" id="loginCard">
-          <p class="stage-kicker">منصة موحدة</p>
-          <h1 class="stage-title">بناء الاستبانات</h1>
-          <p class="stage-sub">ابن استبانتك وحدد كل تفاصيلها، وشارك رابطها، وتابع ردودها في مكان واحد</p>
+          <div class="space-tabs" role="tablist" aria-label="اختر الواجهة" id="spaceTabs">
+            <span class="space-ind" aria-hidden="true"></span>
+            <button type="button" role="tab" data-space="admin" aria-selected="false">الإدارة</button>
+            <button type="button" role="tab" data-space="survey" aria-selected="true">الاستبانات</button>
+            <button type="button" role="tab" data-space="ads" aria-selected="false">الإعلانات</button>
+          </div>
+          <div class="space-copy" id="spaceCopy">
+            <p class="stage-kicker" id="gateKicker">منصة موحدة</p>
+            <h1 class="stage-title" id="gateTitle">بناء الاستبانات</h1>
+            <p class="stage-sub" id="gateSub">ابن استبانتك وحدد كل تفاصيلها، وشارك رابطها، وتابع ردودها في مكان واحد</p>
+          </div>
           <form class="gate-form" id="gateForm" autocomplete="off" novalidate>
-            <label class="login-label" for="accessCode">رمزك الشخصي</label>
+            <label class="login-label" for="accessCode" id="gateLabel">رمز الدخول</label>
             <div class="code-well" id="codeWell">
               <input id="accessCode" type="password" placeholder="أدخل الرمز" required>
               <svg class="note-man" id="noteMan" viewBox="0 0 22 30" aria-hidden="true">

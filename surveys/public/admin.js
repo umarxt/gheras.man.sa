@@ -8,6 +8,17 @@
   const { esc, toAr, icon } = U;
   const TYPES = S.TYPES;
   const TOKEN_KEY = "gheras-surveys-token";
+  const SPACE_KEY = "gheras-surveys-space";
+  // الواجهات الثلاث في البوابة
+  const SPACES = {
+    admin: { name: "الإدارة", kicker: "الإدارة", title: "النماذج الرسمية", sub: "قوالب الإدارة المعتمدة بهوية الجمعية، مثل طلب انضمام الفرق التطوعية",
+      eyebrow: "الإدارة", h1: "النماذج الرسمية", lead: "نماذج الإدارة المعتمدة بهوية الجمعية. أجزاؤها الرسمية ثابتة، وتضيف حولها ما تحتاجه" },
+    survey: { name: "الاستبانات", kicker: "منصة موحدة", title: "بناء الاستبانات", sub: "ابن استبانتك وحدد كل تفاصيلها، وشارك رابطها، وتابع ردودها في مكان واحد",
+      eyebrow: "منصة الاستبانات", h1: "استبانات غراس", lead: "ابن الاستبانة كما تريد، وشارك رابطها، وتصلك الردود في قوقل شيتس مباشرة" },
+    ads: { name: "إعلانات البرامج", kicker: "قريبا", title: "إعلانات البرامج", sub: "مساحة لإعلانات البرامج وتسجيل المستفيدين فيها، نجهزها قريبا",
+      eyebrow: "إعلانات البرامج", h1: "قريبا", lead: "هنا تنشر إعلانات البرامج ويسجل فيها المستفيدون. نخصص هذه الواجهة في المرحلة القادمة" }
+  };
+  let space = "survey";
 
   let token = "", user = null, users = [];
   let surveys = [], filter = "all", query = "";
@@ -59,10 +70,13 @@
     $("#topbar").hidden = !app;
     document.body.classList.toggle("stage-mode", !app);
     document.querySelector('meta[name="theme-color"]').content = app ? getComputedStyle(document.body).backgroundColor : "#0D2142";
+    window.scrollTo(0, 0);
     if (app) K.stage.stop(); else K.stage.start($("#screenGate"));
   }
   function logout(expired) {
-    token = ""; user = null;
+    if (cur) flushSave();
+    token = ""; user = null; cur = null;
+    $("#accessCode").value = "";
     K.storage((ls) => ls.removeItem(TOKEN_KEY));
     show("gate");
     if (expired) $("#gateMsg").textContent = "انتهت الجلسة، ادخل مرة أخرى";
@@ -78,23 +92,52 @@
   }
   function go(hash) { if (location.hash === hash) route(); else location.hash = hash; }
 
+  function saveSession() {
+    K.storage((ls) => { ls.setItem(TOKEN_KEY, JSON.stringify({ token, user, space })); ls.setItem(SPACE_KEY, space); });
+  }
+  // تغيير التبويب في البوابة: ينزلق المؤشر ويتبدل العنوان
+  async function setGateSpace(v, instant) {
+    if (!SPACES[v] || (v === space && !instant)) return;
+    space = v;
+    K.storage((ls) => ls.setItem(SPACE_KEY, v));
+    const keys = Object.keys(SPACES);
+    $("#spaceTabs").style.setProperty("--i", keys.indexOf(v));
+    $$("#spaceTabs [data-space]").forEach((b) => { const on = b.dataset.space === v; b.setAttribute("aria-selected", on); b.tabIndex = on ? 0 : -1; });
+    const copy = $("#spaceCopy"), SP = SPACES[v];
+    if (!instant) { copy.classList.add("swap"); await K.W(220); }
+    $("#gateKicker").textContent = SP.kicker;
+    $("#gateTitle").textContent = SP.title;
+    $("#gateSub").textContent = SP.sub;
+    $("#gateLabel").textContent = "رمز الدخول إلى " + SP.name;
+    $("#gateMsg").textContent = "";
+    copy.classList.remove("swap");
+  }
   function topActions(html) { $("#topActions").innerHTML = html; }
 
   // ——— القائمة ———
   async function loadList() {
-    const r = await call({ action: "list" });
+    const r = await call({ action: "list", space });
     if (!r.ok) { if (!r.auth) toast(r.error || "تعذر تحميل الاستبانات"); return false; }
     surveys = r.surveys.sort((a, b) => String(b.updated).localeCompare(String(a.updated)));
     return true;
   }
   async function renderList() {
+    const SP = SPACES[space];
     document.documentElement.dataset.accent = "navy";
-    document.title = "منصة الاستبانات — غراس";
+    document.title = SP.name + " — غراس";
     $("#backBtn").hidden = true;
-    $("#topbarTitle").textContent = "منصة الاستبانات";
+    $("#topbarTitle").textContent = SP.name;
     setSave("");
-    topActions(`<span class="user-chip">${icon("user", 16)} ${esc(user.name)}</span><button class="icon-btn" type="button" data-act="logout" aria-label="خروج" title="خروج">${icon("logout")}</button>`);
+    const others = (user.spaces || []).filter((x) => x !== space);
+    topActions(`${others.length ? `<button class="chip space-chip" type="button" data-spacemenu title="الانتقال إلى واجهة أخرى">${icon("grid", 14)} ${esc(SP.name)}</button>` : ""}<span class="user-chip">${icon("user", 16)} ${esc(user.name)}</span><button class="icon-btn" type="button" data-act="logout" aria-label="خروج" title="خروج">${icon("logout")}</button>`);
     const host = $("#screenApp");
+    if (space === "ads") {
+      host.innerHTML = `<div class="wrap list-view step">
+        <div class="step-hero"><div><p class="eyebrow">${SP.eyebrow}</p><h1>${SP.h1}</h1><p class="lead">${SP.lead}</p></div></div>
+        <div class="band" aria-hidden="true"></div>
+        <div class="card soon-card"><span class="chip">${icon("clock", 14)} قيد التخطيط</span><p class="hint">أخبرنا بما تريده في هذه الواجهة: الإعلان، والتسجيل، والمقاعد، ورابط كل برنامج باسمه.</p></div></div>`;
+      return;
+    }
     if (!host.querySelector(".list-view")) host.innerHTML = `<div class="wrap list-view step"><div class="empty">${icon("refresh", 30)}<p>جار التحميل…</p></div></div>`;
     await loadList();
     if (location.hash.startsWith("#/s/")) return;
@@ -102,20 +145,20 @@
     host.innerHTML = `<div class="wrap list-view step">
       <div class="step-hero">
         <div>
-          <p class="eyebrow">منصة الاستبانات</p>
-          <h1>استبانات غراس</h1>
-          <p class="lead">ابن الاستبانة كما تريد، وشارك رابطها، وتصلك الردود في قوقل شيتس مباشرة</p>
+          <p class="eyebrow">${SP.eyebrow}</p>
+          <h1>${SP.h1}</h1>
+          <p class="lead">${SP.lead}</p>
         </div>
-        <div class="axis-num" aria-hidden="true">${toAr(surveys.length)}</div>
+        ${surveys.length ? `<div class="axis-num" aria-hidden="true">${toAr(surveys.length)}</div>` : ""}
       </div>
       <div class="band" aria-hidden="true"></div>
-      <div class="section-label"><h2>قوالب الإدارة الرسمية</h2></div>
+      ${space === "admin" ? `<div class="section-label"><h2>القوالب الرسمية</h2></div>
       <div class="tpl-row" role="list">${T.filter((t) => t.official).map((t) => `<button class="tpl-card official" type="button" data-tpl="${t.id}" role="listitem">
-          <span class="tpl-icon">${icon(t.icon, 24)}</span><strong>${esc(t.title)}</strong><span>${esc(t.desc)}</span><span class="chip lock-chip">${icon("lock", 14)} رسمي</span></button>`).join("")}</div>
-      <div class="section-label"><h2>ابدأ استبانة جديدة</h2></div>
-      <div class="tpl-row" role="list">${T.filter((t) => !t.official).map((t) => `<button class="tpl-card ${t.id === "blank" ? "blank" : ""}" type="button" data-tpl="${t.id}" role="listitem">
+          <span class="tpl-icon">${icon(t.icon, 24)}</span><strong>${esc(t.title)}</strong><span>${esc(t.desc)}</span><span class="chip lock-chip">${icon("lock", 14)} رسمي</span></button>`).join("")}</div>` : ""}
+      <div class="section-label"><h2>${space === "admin" ? "نموذج رسمي جديد" : "ابدأ استبانة جديدة"}</h2></div>
+      <div class="tpl-row" role="list">${T.filter((t) => !t.official && (space === "survey" || t.id === "blank")).map((t) => `<button class="tpl-card ${t.id === "blank" ? "blank" : ""}" type="button" data-tpl="${t.id}" role="listitem">
           <span class="tpl-icon">${icon(t.icon, 24)}</span><strong>${esc(t.title)}</strong><span>${esc(t.desc)}</span></button>`).join("")}</div>
-      <div class="section-label"><h2>الاستبانات</h2></div>
+      <div class="section-label"><h2>${space === "admin" ? "النماذج المنشورة" : "الاستبانات"}</h2></div>
       <div class="toolbar">
         <label class="search">${icon("search")}<input class="input" type="search" id="listSearch" placeholder="ابحث بالعنوان" value="${esc(query)}" aria-label="بحث"></label>
         <div class="seg" role="radiogroup" aria-label="تصفية">${[["all", "الكل"], ["open", "تستقبل الردود"], ["closed", "مغلقة"]].map(([v, l]) => `<label class="${filter === v ? "checked" : ""}"><input type="radio" name="listFilter" value="${v}" ${filter === v ? "checked" : ""}>${l}</label>`).join("")}</div>
@@ -147,6 +190,8 @@
     if (!t) return;
     const s = t.build();
     s.id = "";
+    s.space = space;
+    if (space === "admin") s.official = true;
     const r = await call({ action: "save", survey: s });
     if (!r.ok) return toast(r.error || "تعذر إنشاء الاستبانة");
     activeId = null;
@@ -198,7 +243,7 @@
     m._at = Date.now();
     const first = m.querySelector("button"); if (first) first.focus({ preventScroll: true });
   }
-  document.addEventListener("pointerdown", (e) => { if (menuEl && !menuEl.contains(e.target) && !e.target.closest("[data-cardmenu],[data-more],[data-typemenu],[data-secmenu]")) closeMenu(); });
+  document.addEventListener("pointerdown", (e) => { if (menuEl && !menuEl.contains(e.target) && !e.target.closest("[data-cardmenu],[data-more],[data-typemenu],[data-secmenu],[data-spacemenu]")) closeMenu(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenu(); });
   window.addEventListener("scroll", () => { if (menuEl && Date.now() - menuEl._at > 700) closeMenu(); }, { passive: true });
 
@@ -1079,6 +1124,13 @@
     if (act) {
       const a = act.dataset.act;
       if (a === "logout") return logout();
+    }
+    const spm = t.closest("[data-spacemenu]");
+    if (spm) {
+      return openMenu(spm, (user.spaces || []).map((x) => ({ id: x, label: SPACES[x].name, check: true, on: x === space, fn: () => { space = x; saveSession(); go("#/"); } })));
+    }
+    if (act) {
+      const a = act.dataset.act;
       if (a === "preview") return preview();
       if (a === "share") return share(cur.survey.id);
       if (a === "delete") return removeSurvey(cur.survey.id, cur.survey.title);
@@ -1119,11 +1171,22 @@
     $("#backBtn").addEventListener("click", () => go("#/"));
     window.addEventListener("hashchange", route);
 
+    // تبويبات البوابة
+    const saveSpace = K.storage((ls) => ls.getItem(SPACE_KEY));
+    if (SPACES[saveSpace]) space = saveSpace;
+    setGateSpace(space, true);
+    $("#spaceTabs").addEventListener("click", (e) => { const b = e.target.closest("[data-space]"); if (b) setGateSpace(b.dataset.space); });
+    $("#spaceTabs").addEventListener("keydown", (e) => {
+      if (!["ArrowLeft", "ArrowRight"].includes(e.key)) return;
+      const keys = Object.keys(SPACES), i = keys.indexOf(space), n = keys[(i + (e.key === "ArrowLeft" ? 1 : keys.length - 1)) % keys.length];
+      setGateSpace(n); $(`[data-space="${n}"]`).focus();
+    });
+
     K.portalGate({
-      emptyMsg: "أدخل رمزك الشخصي",
+      emptyMsg: "أدخل رمز الدخول",
       verify: async (code) => {
-        const r = await API.call({ action: "login", code });
-        if (r.ok) { token = r.token; user = r.user; K.storage((ls) => ls.setItem(TOKEN_KEY, JSON.stringify({ token, user }))); }
+        const r = await API.call({ action: "login", code, space });
+        if (r.ok) { token = r.token; user = r.user; saveSession(); }
         return r;
       },
       onEnter: async () => {
@@ -1135,7 +1198,7 @@
 
     const saved = K.storage((ls) => ls.getItem(TOKEN_KEY));
     if (saved) {
-      try { const v = JSON.parse(saved); token = v.token; user = v.user; } catch (e) { token = ""; }
+      try { const v = JSON.parse(saved); token = v.token; user = v.user; if (v.space && user && (user.spaces || []).includes(v.space)) space = v.space; } catch (e) { token = ""; }
     }
     if (token && user) { show("app"); route(); }
     else { show("gate"); setTimeout(() => $("#accessCode").focus({ preventScroll: true }), 300); }

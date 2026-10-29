@@ -23,7 +23,14 @@
     return db;
   }
   function save(db) { store((ls) => ls.setItem(DB_KEY, JSON.stringify(db))); }
-  const USERS = [{ name: "مدير المنصة", role: "مدير", code: "1234" }, { name: "قسم البرامج", role: "مصمم", code: "5678" }];
+  const ALL = ["admin", "survey", "ads"];
+  const USERS = [
+    { name: "مدير المنصة", role: "مدير", code: "1234", spaces: ALL },
+    { name: "قسم البرامج", role: "مصمم", code: "5678", spaces: ["survey"] },
+    { name: "الإدارة التنفيذية", role: "مصمم", code: "9999", spaces: ["admin"] }
+  ];
+  const SPACE_NAMES = { admin: "الإدارة", survey: "الاستبانات", ads: "إعلانات البرامج" };
+  const spaceOf = (x) => x.space || (x.official ? "admin" : "survey");
   const ref = () => "ST-" + new Date().toISOString().slice(2, 10).replace(/-/g, "") + "-" + S.uid(4).toUpperCase();
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -68,11 +75,13 @@
     switch (p.action) {
       case "login": {
         const u = USERS.find((x) => x.code === String(p.code || "").trim());
-        out = u ? { ok: true, token: "tok-" + u.code, user: { name: u.name, role: u.role } } : { ok: false, error: "رمز الدخول غير صحيح" };
+        if (!u) { out = { ok: false, error: "رمز الدخول غير صحيح" }; break; }
+        if (p.space && !u.spaces.includes(p.space)) { out = { ok: false, error: "هذا الرمز لا يفتح واجهة " + SPACE_NAMES[p.space] }; break; }
+        out = { ok: true, token: "tok-" + u.code, user: { name: u.name, role: u.role, spaces: u.spaces } };
         break;
       }
       case "list":
-        out = { ok: true, surveys: Object.values(db.surveys).filter((x) => can(user, x)).map((x) => ({
+        out = { ok: true, surveys: Object.values(db.surveys).filter((x) => can(user, x) && (!p.space || spaceOf(x) === p.space)).map((x) => ({
           id: x.id, title: x.title, owner: x.owner, updated: x.updated, created: x.created, count: count(db, x.id),
           accepting: !!x.settings.accepting, reason: S.closedReason(x, count(db, x.id)), quiz: !!(x.settings.quiz && x.settings.quiz.on),
           questions: S.questions(x).length, slug: x.slug || "", official: !!x.official, accent: (x.theme && x.theme.accent) || "navy"
@@ -88,8 +97,9 @@
         if (x.slug && Object.values(db.surveys).some((o) => o.id !== x.id && (o.slug === x.slug || o.id === x.slug))) { out = { ok: false, error: "الرابط «" + x.slug + "» مستخدم في استبانة أخرى، اختر اسما غيره" }; break; }
         const old = x.id && db.surveys[x.id];
         if (old && p.base && old.updated !== p.base) { out = { ok: false, conflict: true, error: "عدل شخص آخر هذه الاستبانة الآن. حدث الصفحة لترى آخر نسخة" }; break; }
-        if (!old) { x.id = x.id || S.uid(6); x.owner = user.name; x.created = new Date().toISOString(); }
-        else { x.owner = old.owner; x.created = old.created; }
+        if (!old) { x.id = x.id || S.uid(6); x.owner = user.name; x.created = new Date().toISOString(); x.space = x.space || "survey"; }
+        else { x.owner = old.owner; x.created = old.created; x.space = spaceOf(old); }
+        if (!user.spaces.includes(spaceOf(x))) { out = { ok: false, error: "لا تملك صلاحية واجهة " + SPACE_NAMES[spaceOf(x)] }; break; }
         x.updated = new Date().toISOString();
         db.surveys[x.id] = x;
         out = { ok: true, id: x.id, updated: x.updated, owner: x.owner };

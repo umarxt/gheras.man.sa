@@ -70,10 +70,11 @@ function actLogin(p) {
   const rows = sheet(SH_USERS).getDataRange().getValues().slice(1);
   const r = rows.find(x => String(x[1]).trim() === code && String(x[4]).trim() !== 'لا' && String(x[0]).trim());
   if (!r) { Utilities.sleep(600); return { ok: false, error: 'رمز الدخول غير صحيح' }; }
-  const user = { name: String(r[0]).trim(), role: String(r[2]).trim() === 'مدير' ? 'مدير' : 'مصمم', email: String(r[3] || '').trim() };
+  const user = { name: String(r[0]).trim(), role: String(r[2]).trim() === 'مدير' ? 'مدير' : 'مصمم', email: String(r[3] || '').trim(), spaces: spacesOf(r) };
+  if (p.space && user.spaces.indexOf(p.space) < 0) return { ok: false, error: 'هذا الرمز لا يفتح واجهة ' + SPACE_NAMES[p.space] };
   const token = Utilities.getUuid() + Utilities.getUuid().slice(0, 8);
   CacheService.getScriptCache().put('s_' + token, JSON.stringify(user), SETTINGS.SESSION_SECONDS);
-  return { ok: true, token: token, user: { name: user.name, role: user.role } };
+  return { ok: true, token: token, user: { name: user.name, role: user.role, spaces: user.spaces } };
 }
 function session(token) {
   if (!token) return null;
@@ -85,8 +86,21 @@ function session(token) {
   const r = rows.find(x => String(x[0]).trim() === u.name);
   if (!r || String(r[4]).trim() === 'لا') return null;
   u.role = String(r[2]).trim() === 'مدير' ? 'مدير' : 'مصمم';
+  u.spaces = spacesOf(r);
   return u;
 }
+// الواجهات التي يفتحها الرمز: المدير يفتح الثلاث، وغيره حسب عمود «الواجهات» (فارغ = الاستبانات)
+const SPACE_NAMES = { admin: 'الإدارة', survey: 'الاستبانات', ads: 'إعلانات البرامج' };
+function spacesOf(r) {
+  if (String(r[2]).trim() === 'مدير') return ['admin', 'survey', 'ads'];
+  const t = String(r[5] || '');
+  const out = [];
+  if (/الإدارة|الادارة/.test(t)) out.push('admin');
+  if (/الاستبانات|الإستبانات/.test(t) || !t.trim()) out.push('survey');
+  if (/الإعلانات|الاعلانات/.test(t)) out.push('ads');
+  return out;
+}
+function spaceOf(s) { return s.space || (s.official ? 'admin' : 'survey'); }
 function actUsers() {
   const rows = sheet(SH_USERS).getDataRange().getValues().slice(1);
   return { ok: true, users: rows.filter(x => String(x[0]).trim() && String(x[4]).trim() !== 'لا').map(x => String(x[0]).trim()) };
@@ -183,8 +197,10 @@ function findRef(sh, ref) {
 
 // ===================== الإدارة =====================
 function actList(p, user) {
-  return { ok: true, surveys: regAll().filter(r => !r.deleted && can(user, r)).map(r => {
-    const s = regSurvey(r);
+  if (p.space && user.spaces.indexOf(p.space) < 0) return { ok: false, error: 'لا تملك صلاحية هذه الواجهة' };
+  return { ok: true, surveys: regAll().filter(r => !r.deleted && can(user, r)).map(r => ({ r: r, s: regSurvey(r) }))
+    .filter(x => !p.space || spaceOf(x.s) === p.space).map(x => {
+    const r = x.r, s = x.s;
     return { id: r.id, title: s.title, owner: r.owner, updated: r.updated, created: r.created, count: r.count,
       accepting: !!s.settings.accepting, reason: GSchema.closedReason(s, r.count), quiz: !!s.settings.quiz.on,
       questions: GSchema.questions(s).length, accent: s.theme.accent || 'navy', slug: s.slug || '', official: !!s.official };
@@ -209,15 +225,18 @@ function actSave(p, user) {
     const now = new Date().toISOString();
     if (rec) {
       if (!can(user, rec)) return { ok: false, error: 'لا تملك صلاحية تعديل هذه الاستبانة' };
+      s.space = spaceOf(regSurvey(rec));
       if (p.base && rec.updated && Math.abs(new Date(p.base) - new Date(rec.updated)) > 1000) return { ok: false, conflict: true, error: 'عدل شخص آخر هذه الاستبانة الآن' };
       // المالك وحده (أو المدير) يغير المتعاونين
       if (rec.owner === user.name || user.role === 'مدير') rec.editors = (s.editors || []).map(String);
     } else {
       const all = regAll().map(x => x.id);
       let id; do { id = GSchema.uid(6); } while (all.indexOf(id) >= 0);
+      s.space = spaceOf(s) === 'admin' ? 'admin' : 'survey';
       rec = { row: 0, id: id, owner: user.name, editors: [], created: now, count: 0, gid: null, cols: [], deleted: false };
       s.id = id;
     }
+    if (user.spaces.indexOf(s.space) < 0) return { ok: false, error: 'لا تملك صلاحية واجهة ' + SPACE_NAMES[s.space] };
     rec.updated = now;
     const sh = respSheet(rec, s);
     syncColumns(rec, s, sh);
@@ -431,10 +450,10 @@ function setup() {
   let u = book.getSheetByName(SH_USERS);
   if (!u) {
     u = book.insertSheet(SH_USERS, 0);
-    head(u, ['الاسم', 'الرمز الشخصي', 'الدور (مدير / مصمم)', 'البريد', 'مفعل (نعم / لا)']);
+    head(u, ['الاسم', 'الرمز الشخصي', 'الدور (مدير / مصمم)', 'البريد', 'مفعل (نعم / لا)', 'الواجهات (الإدارة، الاستبانات، الإعلانات)']);
     const code = 'gheras-' + GSchema.uid(6);
-    u.getRange(2, 1, 1, 5).setValues([['مدير المنصة', code, 'مدير', Session.getEffectiveUser().getEmail(), 'نعم']]);
-    u.setColumnWidths(1, 5, 180);
+    u.getRange(2, 1, 1, 6).setValues([['مدير المنصة', code, 'مدير', Session.getEffectiveUser().getEmail(), 'نعم', 'الإدارة، الاستبانات، الإعلانات']]);
+    u.setColumnWidths(1, 6, 180);
     Logger.log('رمز دخول مدير المنصة: ' + code + ' (غيره من ورقة المستخدمين)');
   }
   u.getRange('C2:C').setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(['مدير', 'مصمم'], true).build());
