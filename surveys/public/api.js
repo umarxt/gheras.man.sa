@@ -61,7 +61,9 @@
     const user = USERS.find((u) => "tok-" + u.code === p.token);
     const needAuth = ["list", "get", "save", "remove", "responses", "delResponse", "users"];
     if (needAuth.includes(p.action) && !user) return { ok: false, auth: true, error: "انتهت الجلسة، ادخل مرة أخرى" };
-    const s = p.id ? db.surveys[p.id] : null;
+    // الاستبانة بمعرفها أو برابطها المخصص
+    const key = String(p.id || "").trim().toLowerCase();
+    const s = key ? db.surveys[p.id] || Object.values(db.surveys).find((x) => x.slug && x.slug === key) || null : null;
     let out;
     switch (p.action) {
       case "login": {
@@ -73,7 +75,7 @@
         out = { ok: true, surveys: Object.values(db.surveys).filter((x) => can(user, x)).map((x) => ({
           id: x.id, title: x.title, owner: x.owner, updated: x.updated, created: x.created, count: count(db, x.id),
           accepting: !!x.settings.accepting, reason: S.closedReason(x, count(db, x.id)), quiz: !!(x.settings.quiz && x.settings.quiz.on),
-          questions: S.questions(x).length, accent: (x.theme && x.theme.accent) || "navy"
+          questions: S.questions(x).length, slug: x.slug || "", official: !!x.official, accent: (x.theme && x.theme.accent) || "navy"
         })) };
         break;
       case "get":
@@ -82,6 +84,8 @@
       case "save": {
         const x = p.survey;
         if (x.id && db.surveys[x.id] && !can(user, db.surveys[x.id])) { out = { ok: false, error: "لا تملك صلاحية تعديل هذه الاستبانة" }; break; }
+        x.slug = S.slugify(x.slug || "");
+        if (x.slug && Object.values(db.surveys).some((o) => o.id !== x.id && (o.slug === x.slug || o.id === x.slug))) { out = { ok: false, error: "الرابط «" + x.slug + "» مستخدم في استبانة أخرى، اختر اسما غيره" }; break; }
         const old = x.id && db.surveys[x.id];
         if (old && p.base && old.updated !== p.base) { out = { ok: false, conflict: true, error: "عدل شخص آخر هذه الاستبانة الآن. حدث الصفحة لترى آخر نسخة" }; break; }
         if (!old) { x.id = x.id || S.uid(6); x.owner = user.name; x.created = new Date().toISOString(); }

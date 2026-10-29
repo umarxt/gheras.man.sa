@@ -60,7 +60,7 @@
     palette: "M12 21a9 9 0 1 1 9-9c0 2-1.5 3-3 3h-2a2 2 0 0 0-1.5 3.3c.4.5.5 1 .5 1.4 0 .7-1 1.3-3 1.3ZM7.5 11h.01M10 7h.01M14.5 7h.01M17 11h.01"
   };
   const icon = (name, size = 20) => `<svg class="ic" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true"><path d="${P[name] || P.plus}"/></svg>`;
-  const TYPE_ICON = { short: "short", paragraph: "para", radio: "radio", checkbox: "box", dropdown: "caret", scale: "scale", rating: "star", grid: "grid", checkgrid: "grid", date: "calendar", time: "clock", file: "upload", text: "text", image: "image", video: "video" };
+  const TYPE_ICON = { short: "short", paragraph: "para", radio: "radio", checkbox: "box", dropdown: "caret", scale: "scale", rating: "star", grid: "grid", checkgrid: "grid", date: "calendar", time: "clock", file: "upload", text: "text", image: "image", video: "video", download: "download" };
 
   // ——— الوسائط ———
   function mediaSrc(url) {
@@ -72,6 +72,16 @@
   function youtubeId(url) {
     const m = /(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/))([\w-]{11})/.exec(String(url || ""));
     return m ? m[1] : "";
+  }
+
+  // رابط تحميل مباشر: ملفات درايف تنزل كما هي، وملفات قوقل تحول إلى صيغة أوفيس
+  function downloadUrl(url) {
+    const u = String(url || "").trim();
+    let m = /docs\.google\.com\/(presentation|spreadsheets|document)\/d\/([\w-]{20,})/.exec(u);
+    if (m) return `https://docs.google.com/${m[1]}/d/${m[2]}/export?format=${{ presentation: "pptx", spreadsheets: "xlsx", document: "docx" }[m[1]]}`;
+    m = /drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:export=\w+&)?id=)([\w-]{20,})/.exec(u);
+    if (m) return "https://drive.google.com/uc?export=download&id=" + m[1];
+    return /^https?:\/\//i.test(u) ? u : "";
   }
 
   // خلط ثابت لكل مجيب: نفس البذرة تعطي نفس الترتيب
@@ -88,7 +98,7 @@
   // ctx: { num, seed, points, files: File[] لم ترفع بعد, uploaded: [{name,url}] }
   function itemHTML(it, a, ctx = {}) {
     const T = S.TYPES[it.type] || {};
-    if (it.type === "text") return `<section class="card info-card" data-item="${it.id}">
+    if (it.type === "text") return `<section class="card info-card ${it.tone === "terms" ? "intro-terms" : ""}" data-item="${it.id}">
       ${it.title ? `<h2 class="card-title">${esc(it.title)}</h2>` : ""}${it.description ? `<p class="info-text">${esc(it.description)}</p>` : ""}</section>`;
     if (it.type === "image") {
       const src = mediaSrc(it.media && it.media.url);
@@ -103,6 +113,13 @@
         ${it.title ? `<h2 class="card-title">${esc(it.title)}</h2>` : ""}
         ${id ? `<div class="video"><iframe src="https://www.youtube-nocookie.com/embed/${id}" title="${esc(it.title || "فيديو")}" loading="lazy" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen></iframe></div>` : `<div class="media-empty">${icon("video", 30)}</div>`}
         ${it.media && it.media.caption ? `<figcaption>${esc(it.media.caption)}</figcaption>` : ""}</figure>`;
+    }
+    if (it.type === "download") {
+      const url = downloadUrl(it.media && it.media.url);
+      return `<section class="card dl-card" data-item="${it.id}">
+        <span class="dl-icon">${icon("file", 28)}</span>
+        <div class="dl-body"><h2 class="card-title">${esc(it.title || "ملف للتحميل")}</h2>${it.description ? `<p class="info-text">${esc(it.description)}</p>` : ""}</div>
+        ${url ? `<a class="btn btn-primary dl-btn" href="${esc(url)}" target="_blank" rel="noopener">${icon("download", 18)} ${esc((it.media && it.media.caption) || "تحميل النموذج")}</a>` : `<span class="chip off">يضاف الملف قريبا</span>`}</section>`;
     }
     if (!T.q) return "";
     const n = it.id;
@@ -307,5 +324,5 @@
     } catch (e) { return toAr(d.toISOString().slice(0, 10)); }
   }
 
-  window.GUI = { esc, toAr, icon, TYPE_ICON, letter, mediaSrc, youtubeId, shuffle, itemHTML, filesHTML, summaryHTML, bars, modal, confirmBox, copy, formUrl, fmtDate };
+  window.GUI = { esc, toAr, icon, TYPE_ICON, letter, mediaSrc, youtubeId, downloadUrl, shuffle, itemHTML, filesHTML, summaryHTML, bars, modal, confirmBox, copy, formUrl, fmtDate };
 })();

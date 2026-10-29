@@ -20,7 +20,7 @@ const SETTINGS = {
 const SH_USERS = 'المستخدمون';
 const SH_REG = 'الاستبانات';
 const SH_LOG = 'سجل الردود';
-const REG_HEAD = ['المعرف', 'العنوان', 'المالك', 'المحررون', 'أنشئت', 'آخر تعديل', 'الردود', 'ورقة الردود', 'أعمدة الردود', 'محذوفة'];
+const REG_HEAD = ['المعرف', 'العنوان', 'المالك', 'المحررون', 'أنشئت', 'آخر تعديل', 'الردود', 'ورقة الردود', 'أعمدة الردود', 'محذوفة', 'الرابط'];
 const DEF_COL = REG_HEAD.length + 1;   // أول عمود للتعريف
 const DEF_CHUNKS = 10;
 const LOG_HEAD = ['رقم المرجع', 'الاستبانة', 'الوقت', 'البريد', 'رمز التعديل', 'الدرجة'];
@@ -109,10 +109,15 @@ function regAll() {
     row: i + 2, id: String(r[0]), title: String(r[1]), owner: String(r[2]),
     editors: String(r[3] || '').split('،').map(x => x.trim()).filter(Boolean),
     created: iso(r[4]), updated: iso(r[5]), count: Number(r[6]) || 0, gid: r[7] === '' ? null : Number(r[7]),
-    cols: r[8] ? JSON.parse(r[8]) : [], deleted: String(r[9]) === 'نعم', raw: r
+    cols: r[8] ? JSON.parse(r[8]) : [], deleted: String(r[9]) === 'نعم', slug: String(r[10] || ''), raw: r
   })).filter(x => x.id);
 }
-function regFind(id) { return regAll().find(x => x.id === String(id || '') && !x.deleted) || null; }
+// الاستبانة بمعرفها أو برابطها المخصص
+function regFind(id) {
+  const key = String(id || '').trim(), low = key.toLowerCase();
+  if (!key) return null;
+  return regAll().find(x => !x.deleted && (x.id === key || (x.slug && x.slug === low))) || null;
+}
 function regSurvey(rec) {
   const s = JSON.parse(readChunks(rec.raw, DEF_COL, DEF_CHUNKS) || '{}');
   s.id = rec.id; s.owner = rec.owner; s.editors = rec.editors; s.created = rec.created; s.updated = rec.updated;
@@ -131,7 +136,7 @@ function regWrite(rec, survey) {
   const def = JSON.stringify(Object.assign({}, survey, { owner: undefined, editors: undefined, created: undefined, updated: undefined }));
   if (def.length > CHUNK * DEF_CHUNKS) throw new Error('too big');
   const row = [rec.id, clean(survey.title, 200), rec.owner, rec.editors.join('، '), new Date(rec.created), new Date(rec.updated), rec.count,
-    rec.gid == null ? '' : rec.gid, JSON.stringify(rec.cols), rec.deleted ? 'نعم' : ''].concat(chunks(def, DEF_CHUNKS));
+    rec.gid == null ? '' : rec.gid, JSON.stringify(rec.cols), rec.deleted ? 'نعم' : '', survey.slug || ''].concat(chunks(def, DEF_CHUNKS));
   if (!rec.row) rec.row = sh.getLastRow() + 1;
   sh.getRange(rec.row, 1, 1, row.length).setValues([row]);
 }
@@ -182,7 +187,7 @@ function actList(p, user) {
     const s = regSurvey(r);
     return { id: r.id, title: s.title, owner: r.owner, updated: r.updated, created: r.created, count: r.count,
       accepting: !!s.settings.accepting, reason: GSchema.closedReason(s, r.count), quiz: !!s.settings.quiz.on,
-      questions: GSchema.questions(s).length, accent: s.theme.accent || 'navy' };
+      questions: GSchema.questions(s).length, accent: s.theme.accent || 'navy', slug: s.slug || '', official: !!s.official };
   }) };
 }
 function sheetUrl(rec) { return rec.gid == null ? ss().getUrl() : ss().getUrl() + '#gid=' + rec.gid; }
@@ -197,6 +202,8 @@ function actSave(p, user) {
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
+    s.slug = GSchema.slugify(s.slug || '');
+    if (s.slug && regAll().some(x => !x.deleted && x.id !== s.id && (x.slug === s.slug || x.id === s.slug))) return { ok: false, error: 'الرابط «' + s.slug + '» مستخدم في استبانة أخرى، اختر اسما غيره' };
     let rec = s.id ? regFind(s.id) : null;
     if (s.id && !rec) return { ok: false, error: 'الاستبانة غير موجودة' };
     const now = new Date().toISOString();

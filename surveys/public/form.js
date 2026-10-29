@@ -12,7 +12,7 @@
   const MAX_MB = CFG.MAX_FILE_MB || 10;
 
   const params = new URLSearchParams(location.search);
-  const surveyId = params.get("s") || (/^\/s\/([\w-]+)/.exec(location.pathname) || [])[1] || "";
+  const surveyId = params.get("s") || decodeURIComponent((/^\/s\/([^/?#]+)/.exec(location.pathname) || [])[1] || "");
   const preview = params.get("preview") === "1";
   const prefillMode = preview && params.get("mode") === "prefill";
   const editToken = params.get("e") || "";
@@ -236,7 +236,12 @@
       <div class="band" aria-hidden="true"></div>
       <div class="step-body">
         ${emailCard}
-        ${list.map((it) => U.itemHTML(it, st.answers[it.id], { num: S.isQ(it) && numbered ? ++num : 0, seed: st.seed, points, files: files[it.id] || [], uploaded: uploadedOf(it) })).join("")}
+        ${list.map((it) => {
+          const h = U.itemHTML(it, st.answers[it.id], { num: S.isQ(it) && numbered ? ++num : 0, seed: st.seed, points, files: files[it.id] || [], uploaded: uploadedOf(it) });
+          if (!it.showIf || !it.showIf.item) return h;
+          const on = S.visible(it, st.answers);
+          return `<div class="cond ${on ? "" : "off"}" data-cond="${it.id}" ${on ? "" : "inert"}>${h}</div>`;
+        }).join("")}
         ${!list.length ? `<div class="card"><p class="hint">لا توجد أسئلة في هذا القسم</p></div>` : ""}
       </div>
     </div>`;
@@ -254,7 +259,7 @@
   const isLast = () => S.nextIndex(survey, st.cur, st.answers) === -1;
   function updateDock() {
     const sec = survey.sections[st.cur];
-    const qs = (sec.items || []).filter(S.isQ);
+    const qs = (sec.items || []).filter((it) => S.isQ(it) && S.visible(it, st.answers));
     const done = qs.filter((it) => !S.isEmpty(it, valueOf(it))).length;
     $("#dockCount").textContent = qs.length ? `أجبت ${toAr(done)} من ${toAr(qs.length)}` : "";
     $("#nextBtn").textContent = isLast() ? (prefillMode ? "إنشاء الرابط" : preview ? "إنهاء المعاينة" : editToken ? "حفظ التعديل" : "إرسال") : "التالي";
@@ -280,7 +285,7 @@
       showErr("__email", msg);
       if (msg) { first = $("#q___email"); firstMsg = msg; }
     }
-    (sec.items || []).filter(S.isQ).forEach((it) => {
+    (sec.items || []).filter((it) => S.isQ(it) && S.visible(it, st.answers)).forEach((it) => {
       const msg = S.check(it, valueOf(it));
       showErr(it.id, msg);
       if (msg && !first) { first = $(`#q_${CSS.escape(it.id)}`); firstMsg = msg; }
@@ -429,6 +434,14 @@
   }
 
   // ——— الأحداث ———
+  // إظهار الأسئلة المشروطة وإخفاؤها بانسياب حسب الإجابات
+  function applyConds() {
+    $$("[data-cond]").forEach((el) => {
+      const on = S.visible(S.findItem(survey, el.dataset.cond), st.answers);
+      el.classList.toggle("off", !on);
+      el.inert = !on;
+    });
+  }
   function setAnswer(id, v) {
     if (v == null || v === "" || (typeof v === "object" && !Array.isArray(v) && S.isEmpty(S.findItem(survey, id) || { type: "grid" }, v))) delete st.answers[id];
     else st.answers[id] = v;
@@ -437,6 +450,7 @@
     const dot = $(`[data-jump="${CSS.escape(id)}"]`);
     if (dot && it) dot.classList.toggle("done", !S.isEmpty(it, valueOf(it)));
     updateDock();
+    applyConds();
     saveDraft();
   }
   function choiceValue(id) {

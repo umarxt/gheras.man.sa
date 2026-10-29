@@ -431,3 +431,26 @@
   .topbar-inner { grid-template-columns: auto 1fr auto; }
   .tabs-bar { top: 61px; }
 }
+
+/* ——— ملف للتحميل ——— */
+.dl-card { display: grid; grid-template-columns: auto 1fr auto; gap: 18px; align-items: center; border-inline-start: 4px solid var(--teal); }
+.dl-icon { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; background: var(--well); color: var(--teal); box-shadow: var(--inset); }
+.dl-body .card-title { margin: 0 0 4px; }
+.dl-body .info-text { font-size: 15px; color: var(--muted); }
+/* السؤال الذي يظهر حسب إجابة سابقة */
+.cond { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .45s var(--ease-out), opacity .35s; }
+.cond > * { min-height: 0; overflow: hidden; }
+.cond.off { grid-template-rows: 0fr; opacity: 0; pointer-events: none; }
+.cond.off > * { margin-bottom: 0; }
+/* مقدمة الاستبانة: الشروط والنطاق */
+.intro-terms { border-inline-start: 4px solid var(--lime); }
+.intro-terms .info-text { line-height: 2; }
+.lock-chip { color: var(--muted); }
+@media (max-width: 640px) { .dl-card { grid-template-columns: auto 1fr; } .dl-card .dl-btn, .dl-card > .chip { grid-column: 1 / -1; justify-self: start; } }
+.tpl-card.official { border-color: var(--line); background: linear-gradient(160deg, var(--surface), var(--sel-bg)); }
+.tpl-card.official .tpl-icon { background: var(--navy); color: #FFFFFF; box-shadow: var(--knob); }
+.tpl-card .chip { justify-self: start; margin-top: 6px; }
+.slug-box { display: flex; align-items: stretch; direction: ltr; border-radius: var(--radius-md); background: var(--field); border: 1px solid var(--line-soft); box-shadow: var(--inset); overflow: hidden; }
+.slug-pre { display: flex; align-items: center; padding: 0 4px 0 14px; color: var(--muted); font-size: 15px; white-space: nowrap; max-width: 55%; overflow: hidden; text-overflow: ellipsis; }
+.slug-box .input { border: 0; box-shadow: none; background: transparent; padding-left: 2px; }
+.slug-box:focus-within { border-color: var(--accent); box-shadow: var(--inset), var(--glow); }

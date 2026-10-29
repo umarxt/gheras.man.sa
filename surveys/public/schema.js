@@ -21,7 +21,8 @@ var GSchema = (function () {
     file: { label: "رفع ملف", q: true },
     text: { label: "عنوان ووصف" },
     image: { label: "صورة" },
-    video: { label: "فيديو" }
+    video: { label: "فيديو" },
+    download: { label: "ملف للتحميل" }
   };
 
   var FILE_KINDS = {
@@ -211,11 +212,25 @@ var GSchema = (function () {
     }
     return out;
   }
-  // الإجابات في الأقسام التي مر بها المجيب فقط
+  // سؤال يظهر حسب إجابة سؤال سابق: showIf = { item: معرف السؤال, value: الخيار }
+  function visible(it, answers) {
+    var c = it.showIf;
+    if (!c || !c.item) return true;
+    var a = (answers || {})[c.item];
+    if (a == null || a === "") return false;
+    if (typeof a === "object" && !Array.isArray(a)) return (a.c || []).indexOf(c.value) >= 0 || (c.value === OTHER && a.o != null);
+    return String(a) === String(c.value);
+  }
+  // العناصر الظاهرة في الأقسام التي مر بها المجيب فقط
   function pathItems(survey, answers) {
     var ids = path(survey, answers), out = [];
-    (survey.sections || []).forEach(function (s) { if (ids.indexOf(s.id) >= 0) (s.items || []).forEach(function (it) { out.push(it); }); });
+    (survey.sections || []).forEach(function (s) { if (ids.indexOf(s.id) >= 0) (s.items || []).forEach(function (it) { if (visible(it, answers)) out.push(it); }); });
     return out;
+  }
+  // الرابط المخصص: حروف إنجليزية صغيرة أو عربية وأرقام وشرطات
+  function slugify(v) {
+    return digits(v).trim().toLowerCase().replace(/[\s_]+/g, "-").replace(/[^a-z0-9\u0621-\u064A-]/g, "")
+      .replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
   }
 
   // ——— تحقق كامل قبل الحفظ (يستعمله الخادم) ———
@@ -359,7 +374,7 @@ var GSchema = (function () {
   // ——— استبانة جديدة ———
   function blank(title) {
     return {
-      id: "", title: title || "استبانة بلا عنوان", description: "", kicker: "استبانة",
+      id: "", slug: "", official: false, title: title || "استبانة بلا عنوان", description: "", kicker: "استبانة",
       theme: { accent: "navy" },
       settings: {
         accepting: true, opensAt: "", closesAt: "", closedMessage: "", maxResponses: 0,
@@ -379,7 +394,7 @@ var GSchema = (function () {
     if (type === "date") it.date = { time: false };
     if (type === "time") it.time = { duration: false };
     if (type === "file") it.file = { kinds: [], maxFiles: 1, maxMB: 10 };
-    if (type === "image" || type === "video") it.media = { url: "", caption: "" };
+    if (type === "image" || type === "video" || type === "download") it.media = { url: "", caption: "" };
     if (TYPES[type].grade) it.quiz = { points: 0, key: [], gridKey: {}, fbOk: "", fbBad: "" };
     return it;
   }
@@ -398,7 +413,7 @@ var GSchema = (function () {
   return {
     TYPES: TYPES, FILE_KINDS: FILE_KINDS, OTHER: OTHER, MSG: MSG,
     uid: uid, digits: digits, toAr: toAr, clone: clone, isQ: isQ, items: items, questions: questions, findItem: findItem,
-    ext: ext, allowedExt: allowedExt, isEmpty: isEmpty, check: check, nextIndex: nextIndex, path: path, pathItems: pathItems,
+    ext: ext, allowedExt: allowedExt, isEmpty: isEmpty, check: check, nextIndex: nextIndex, path: path, pathItems: pathItems, visible: visible, slugify: slugify,
     validate: validate, grade: grade, publicView: publicView, columns: columns, cell: cell, cellText: cellText, cellFor: cellFor,
     aggregate: aggregate, summary: summary, blank: blank, newItem: newItem, closedReason: closedReason
   };

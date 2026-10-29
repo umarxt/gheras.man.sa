@@ -109,8 +109,11 @@
         <div class="axis-num" aria-hidden="true">${toAr(surveys.length)}</div>
       </div>
       <div class="band" aria-hidden="true"></div>
+      <div class="section-label"><h2>قوالب الإدارة الرسمية</h2></div>
+      <div class="tpl-row" role="list">${T.filter((t) => t.official).map((t) => `<button class="tpl-card official" type="button" data-tpl="${t.id}" role="listitem">
+          <span class="tpl-icon">${icon(t.icon, 24)}</span><strong>${esc(t.title)}</strong><span>${esc(t.desc)}</span><span class="chip lock-chip">${icon("lock", 14)} رسمي</span></button>`).join("")}</div>
       <div class="section-label"><h2>ابدأ استبانة جديدة</h2></div>
-      <div class="tpl-row" role="list">${T.map((t) => `<button class="tpl-card ${t.id === "blank" ? "blank" : ""}" type="button" data-tpl="${t.id}" role="listitem">
+      <div class="tpl-row" role="list">${T.filter((t) => !t.official).map((t) => `<button class="tpl-card ${t.id === "blank" ? "blank" : ""}" type="button" data-tpl="${t.id}" role="listitem">
           <span class="tpl-icon">${icon(t.icon, 24)}</span><strong>${esc(t.title)}</strong><span>${esc(t.desc)}</span></button>`).join("")}</div>
       <div class="section-label"><h2>الاستبانات</h2></div>
       <div class="toolbar">
@@ -125,7 +128,7 @@
     const q = query.trim().toLowerCase();
     const list = surveys.filter((s) => (!q || String(s.title).toLowerCase().includes(q)) && (filter === "all" || (filter === "open" ? !s.reason : !!s.reason)));
     $("#sGrid").innerHTML = list.length ? `<div class="s-grid">${list.map((s, i) => `<article class="s-card" data-accent="${esc(s.accent || "navy")}" style="animation-delay:${Math.min(i, 8) * 40}ms">
-        <div class="s-top">${status(s)}${s.quiz ? `<span class="chip">${icon("quiz", 14)} اختبار</span>` : ""}</div>
+        <div class="s-top">${status(s)}${s.official ? `<span class="chip">${icon("lock", 14)} رسمي</span>` : ""}${s.quiz ? `<span class="chip">${icon("quiz", 14)} اختبار</span>` : ""}</div>
         <h3 class="s-title" data-open="${s.id}" tabindex="0" role="link">${esc(s.title || "بلا عنوان")}</h3>
         <div class="s-count">${toAr(s.count)}<small>${rCount(s.count)}</small></div>
         <div class="s-meta"><span>${icon("list", 14)} ${qCount(s.questions || 0)}</span><span>${icon("clock", 14)} ${U.fmtDate(s.updated)}</span>${user.role === "مدير" && s.owner ? `<span>${icon("user", 14)} ${esc(s.owner)}</span>` : ""}</div>
@@ -269,10 +272,14 @@
       setSave("لم يحفظ: تعارض", true);
       const ok = await U.confirmBox("عدل غيرك هذه الاستبانة", "حفظ شخص آخر نسخة أحدث الآن. حدث الصفحة لترى نسخته، أو احفظ نسختك فوقها.", "احفظ نسختي");
       if (ok && cur) { cur.base = ""; doSave(); }
-    } else if (!r.auth) {
+    } else if (r.net) {
       dirty = true;
       setSave("تعذر الحفظ، نعيد المحاولة…", true);
       retryTimer = setTimeout(doSave, 5000);
+    } else if (!r.auth) {
+      dirty = true;
+      setSave("لم يحفظ", true);
+      toast(r.error || "تعذر الحفظ", 5000);
     }
   }
   async function flushSave() { if (dirty) await doSave(); while (saving) await K.wait(100); }
@@ -345,6 +352,7 @@
     else if (T.grid) prev = `<span>${toAr(it.rows.length)} صفوف × ${toAr(it.cols.length)} أعمدة</span>`;
     else if (it.type === "image") { const src = U.mediaSrc(it.media.url); prev = src ? `<span class="media-prev"><img src="${esc(src)}" alt="" style="max-height:120px" referrerpolicy="no-referrer"></span>` : `<span>لم تحدد صورة</span>`; }
     else if (it.type === "video") prev = `<span>${U.youtubeId(it.media.url) ? "فيديو يوتيوب" : "لم يحدد فيديو"}</span>`;
+    else if (it.type === "download") prev = `<span>${icon("download", 16)} ${U.downloadUrl(it.media.url) ? "الملف جاهز للتحميل" : "لم يضف الملف بعد"}</span>`;
     else if (it.type === "text") prev = it.description ? `<span>${esc(it.description.slice(0, 140))}</span>` : "";
     else if (it.type === "file") prev = `<span>${icon("upload", 16)} حتى ${toAr(it.file.maxFiles)} ${it.file.maxFiles === 1 ? "ملف" : "ملفات"}</span>`;
     else if (it.type === "date") prev = `<span>${icon("calendar", 16)} يوم / شهر / سنة${it.date.time ? " والوقت" : ""}</span>`;
@@ -353,7 +361,8 @@
     return `<div class="ed-item" data-item="${it.id}" draggable="true" tabindex="0" aria-label="${esc(it.title || T.label)}">
       <span class="drag-handle" aria-hidden="true"></span>
       <div class="ed-mini"><div class="ed-mini-top"><span class="ed-mini-title ${it.title ? "" : "ph"}">${esc(it.title || (T.q ? "سؤال بلا عنوان" : T.label))}${it.required ? ' <span class="req">*</span>' : ""}</span>
-      <span class="chip">${icon(U.TYPE_ICON[it.type], 14)} ${T.label}${pts}</span></div>
+      ${it.locked ? `<span class="chip lock-chip">${icon("lock", 14)} رسمي</span>` : ""}<span class="chip">${icon(U.TYPE_ICON[it.type], 14)} ${T.label}${pts}</span></div>
+      ${it.showIf && it.showIf.item ? `<span class="chip" style="justify-self:start">${icon("branch", 14)} يظهر إذا كانت إجابة «${esc(((S.findItem(cur.survey, it.showIf.item) || {}).title || "").slice(0, 40))}» ${esc(it.showIf.value)}</span>` : ""}
       <div class="ed-mini-preview">${prev}</div></div></div>`;
   }
 
@@ -410,11 +419,27 @@
         <div class="inline-fields"><span>أقصى عدد للملفات</span>${sel('data-filemax="maxFiles"', [1, 3, 5, 10].map((n) => [n, toAr(n)]), f.maxFiles, "أقصى عدد للملفات")}
           <span>أقصى حجم للملف</span>${sel('data-filemax="maxMB"', [1, 5, 10].map((n) => [n, toAr(n) + " م.ب"]), f.maxMB, "أقصى حجم للملف")}</div>
         <p class="hint">تحفظ الملفات في مجلد الاستبانة في قوقل درايف، ويظهر رابطها في الشيت.</p>`;
+    } else if (it.type === "download") {
+      body = `<input class="input" dir="ltr" data-media="url" value="${esc(it.media.url || "")}" placeholder="رابط الملف في قوقل درايف (مشارك لأي شخص لديه الرابط)" aria-label="رابط الملف">
+        <input class="input" data-media="caption" value="${esc(it.media.caption || "")}" placeholder="نص الزر: تحميل النموذج" aria-label="نص الزر">
+        <p class="hint">${U.downloadUrl(it.media.url) ? "يحمل المجيب الملف بضغطة." : "ضع الرابط الآن أو لاحقا، وإلى ذلك يرى المجيب «يضاف الملف قريبا»."} عروض قوقل وجداوله ومستنداته تنزل بصيغة بوربوينت وإكسل ووورد.</p>`;
     } else if (it.type === "image" || it.type === "video") {
       const src = it.type === "image" ? U.mediaSrc(it.media.url) : "", yt = it.type === "video" ? U.youtubeId(it.media.url) : "";
       body = `<input class="input" dir="ltr" data-media="url" value="${esc(it.media.url || "")}" placeholder="${it.type === "image" ? "رابط الصورة (رابط مباشر أو رابط ملف في قوقل درايف مشارك للجميع)" : "رابط فيديو يوتيوب"}" aria-label="الرابط">
         <input class="input" data-media="caption" value="${esc(it.media.caption || "")}" placeholder="تعليق تحت ${it.type === "image" ? "الصورة" : "الفيديو"} (اختياري)" aria-label="التعليق">
         <div class="media-prev">${src ? `<img src="${esc(src)}" alt="" referrerpolicy="no-referrer">` : yt ? `<div class="video"><iframe src="https://www.youtube-nocookie.com/embed/${yt}" title="معاينة" loading="lazy" allowfullscreen></iframe></div>` : ""}</div>`;
+    }
+
+    // الإظهار حسب إجابة سابقة
+    let cond = "";
+    if (it.showIf) {
+      const before = [];
+      for (const x of S.items(cur.survey)) { if (x.id === it.id) break; if (TYPES[x.type].choice) before.push(x); }
+      const src = before.find((x) => x.id === it.showIf.item);
+      cond = `<div class="sub-panel"><h4>${icon("branch", 18)} يظهر ${T.q ? "هذا السؤال" : "هذا العنصر"} فقط إذا</h4>
+        ${before.length ? `<div class="inline-fields">${sel('data-cond="item"', [["", "اختر سؤالا"]].concat(before.map((x) => [x.id, (x.title || "سؤال بلا عنوان").slice(0, 50)])), it.showIf.item, "السؤال")}
+          ${src ? `<span>كانت إجابته</span>${sel('data-cond="value"', [["", "اختر"]].concat(src.options.map((o) => [o.label, o.label]), src.other ? [[S.OTHER, S.OTHER]] : []), it.showIf.value, "الإجابة")}` : ""}</div>`
+        : `<p class="hint">أضف قبله سؤال اختيار من متعدد أو قائمة منسدلة أو مربعات اختيار</p>`}</div>`;
     }
 
     // التحقق من الإجابة
@@ -459,9 +484,9 @@
         <textarea class="input ed-q-in" rows="1" data-f="title" placeholder="${T.q ? "السؤال" : isText ? "العنوان" : "العنوان (اختياري)"}" aria-label="نص السؤال">${esc(it.title)}</textarea>
         <div class="type-pick"><button class="type-btn" type="button" data-typemenu aria-haspopup="menu">${icon(U.TYPE_ICON[it.type])}<span>${T.label}</span>${icon("caret", 18)}</button></div>
       </div>
-      ${ui.desc.has(it.id) || isText ? `<textarea class="plain-in ed-desc" rows="1" data-f="description" placeholder="الوصف" aria-label="الوصف">${esc(it.description || "")}</textarea>` : ""}
+      ${ui.desc.has(it.id) || isText || it.type === "download" ? `<textarea class="plain-in ed-desc" rows="1" data-f="description" placeholder="الوصف" aria-label="الوصف">${esc(it.description || "")}</textarea>` : ""}
       <div class="ed-body">${body}</div>
-      ${val}${keyPanel}
+      ${cond}${val}${keyPanel}
       <div class="ed-foot">
         ${quizOn && !inKey ? `<button class="link-btn" type="button" data-keymode>${icon("quiz", 18)} مفتاح الإجابة (${toAr(it.quiz.points || 0)} درجة)</button>` : ""}
         <span class="grow"></span>
@@ -535,7 +560,7 @@
     ]);
   }
   function typeMenu(anchor, it) {
-    const groups = [["short", "paragraph"], ["radio", "checkbox", "dropdown"], ["scale", "rating", "grid", "checkgrid"], ["date", "time", "file"], ["text", "image", "video"]];
+    const groups = [["short", "paragraph"], ["radio", "checkbox", "dropdown"], ["scale", "rating", "grid", "checkgrid"], ["date", "time", "file"], ["text", "image", "video", "download"]];
     const items = [];
     groups.forEach((g, gi) => { if (gi) items.push("-"); g.forEach((t) => items.push({ id: t, label: TYPES[t].label, icon: U.TYPE_ICON[t], check: true, on: it.type === t, fn: () => changeType(it, t) })); });
     openMenu(anchor, items);
@@ -569,6 +594,8 @@
     } });
     if (T.branch) items.push({ id: "branch", label: multi ? "الانتقال إلى قسم حسب الإجابة" : "الانتقال حسب الإجابة (أضف قسما أولا)", check: true, on: !!it.branch, fn: () => { if (!multi) return toast("أضف قسما ثانيا أولا من شريط الإضافة"); it.branch = !it.branch; markDirty(); renderQuestions(); } });
     if (T.choice || T.grid) items.push({ id: "shuffle", label: T.grid ? "ترتيب الصفوف عشوائيا" : "ترتيب الخيارات عشوائيا", check: true, on: !!it.shuffle, fn: () => { it.shuffle = !it.shuffle; markDirty(); renderQuestions(); } });
+    items.push({ id: "cond", label: "الإظهار حسب إجابة سابقة", check: true, on: !!it.showIf, fn: () => { if (it.showIf) delete it.showIf; else it.showIf = { item: "", value: "" }; markDirty(); renderQuestions(); } });
+    if (user.role === "مدير") items.push({ id: "lock", label: "جزء رسمي ثابت (لا يعدله إلا المدير)", check: true, on: !!it.locked, fn: () => { it.locked = !it.locked; markDirty(); renderQuestions(); } });
     if (T.grid) items.push({ id: "onePerCol", label: "لا يتكرر العمود في أكثر من صف", check: true, on: !!it.onePerCol, fn: () => { it.onePerCol = !it.onePerCol; markDirty(); renderQuestions(); } });
     if (items.length) items.push("-");
     items.push({ id: "up", label: "نقل لأعلى", icon: "up", fn: () => moveItem(it.id, -1) });
@@ -648,6 +675,7 @@
     const box = t.closest("[data-item]");
     if (!box) return;
     const it = locate(box.dataset.item).item;
+    if (d.cond) { it.showIf[d.cond] = t.value; if (d.cond === "item") it.showIf.value = ""; markDirty(); return renderQuestions(); }
     if (d.required !== undefined && t.type === "checkbox") { it.required = t.checked; markDirty(); return; }
     if (d.go) { it.options[+d.go].go = t.value; return markDirty(); }
     if (d.othergo !== undefined && t.tagName === "SELECT") { it.otherGo = t.value; return markDirty(); }
@@ -705,7 +733,10 @@
     const box = t.closest("[data-item]");
     if (!box) return;
     const id = box.dataset.item;
-    if (!box.classList.contains("active")) return activate(id, false);
+    if (!box.classList.contains("active")) {
+      if (locate(id).item.locked && user.role !== "مدير") return toast("هذا جزء رسمي ثابت من الإدارة، يعدله مدير المنصة");
+      return activate(id, false);
+    }
     const it = locate(id).item;
     const b = t.closest("button, [data-keyopt]");
     if (!b) return;
@@ -765,6 +796,12 @@
     const segS = (key, opts, val) => `<div class="seg" role="radiogroup">${opts.map(([v, l]) => `<label class="${val === v ? "checked" : ""}"><input type="radio" name="set_${key}" value="${v}" data-set="${key}" ${val === v ? "checked" : ""}>${l}</label>`).join("")}</div>`;
     const swS = (key, on) => `<label class="switch"><input type="checkbox" data-set="${key}" ${on ? "checked" : ""}><span class="track"></span></label>`;
     $("#tabHost").innerHTML = `<div class="set-wrap step">
+      <section class="card set-card"><h2 class="card-title">${icon("link")} الرابط</h2>
+        <label class="field"><span class="field-label">رابط مخصص باسم الفريق أو البرنامج</span>
+          <div class="slug-box"><span class="slug-pre" dir="ltr">${esc(U.formUrl("").replace(/^https?:\/\//, ""))}</span><input class="input" dir="ltr" data-slug value="${esc(s.slug || "")}" placeholder="${esc(s.id)}" aria-label="الرابط المخصص"></div>
+          <span class="hint">حروف إنجليزية أو عربية وأرقام وشرطات، مثل alnoor أو ghars-1448. إن تركته فارغا يبقى الرابط بالمعرف. الرابط القديم بالمعرف يظل يعمل.</span></label>
+      </section>
+
       <section class="card set-card"><h2 class="card-title">${icon("clock")} استقبال الردود</h2>
         ${setRow("تستقبل الردود", "إذا أوقفتها يظهر للمجيب أن الاستبانة مغلقة", swS("accepting", st.accepting))}
         <div class="set-sub"><label class="field"><span class="field-label">رسالة الإغلاق (اختياري)</span><textarea class="textarea" data-set="closedMessage" placeholder="مثل: انتهت فترة التسجيل، شكرا لاهتمامكم">${esc(st.closedMessage || "")}</textarea></label></div>
@@ -814,6 +851,11 @@
   }
   function setInput(e) {
     const t = e.target, d = t.dataset, s = cur.survey, st = s.settings;
+    if (d.slug !== undefined) {
+      s.slug = S.slugify(t.value);
+      if (e.type === "change") t.value = s.slug;
+      return markDirty();
+    }
     if (d.set === undefined && d.accent === undefined && d.editor === undefined) return;
     if (d.accent !== undefined) { s.theme.accent = t.value; document.documentElement.dataset.accent = t.value; $$(".accent-pick label").forEach((l) => l.classList.toggle("checked", l.querySelector("input").checked)); return markDirty(); }
     if (d.editor !== undefined) {
@@ -974,7 +1016,7 @@
     let s = cur && cur.survey.id === id ? cur.survey : null, count = cur && cur.survey.id === id ? cur.count : 0;
     if (!s) { const r = await call({ action: "get", id }); if (!r.ok) return toast(r.error); s = r.survey; count = r.count; }
     if (cur && cur.survey.id === id) await flushSave();
-    const url = U.formUrl(id);
+    const url = U.formUrl(s.slug || id);
     const reason = S.closedReason(s, count);
     const text = (s.title || "استبانة") + "\n" + url + (s.settings.accessCode ? "\nرمز الاستبانة: " + s.settings.accessCode : "");
     const m = U.modal(`<h2 class="modal-title">مشاركة الاستبانة</h2>

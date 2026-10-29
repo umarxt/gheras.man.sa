@@ -29,7 +29,45 @@
     : q("short", "اسم البرنامج", { required: true }));
   const agree = ["موافق بشدة", "موافق", "محايد", "غير موافق", "غير موافق بشدة"];
 
+  // قالب رسمي من الإدارة: الأجزاء المقفلة لا يعدلها إلا المدير، ويضاف إليها ما يلزم
+  function teamJoin() {
+    const prev = q("radio", "هل سبق أن كان الفريق تحت مظلة جهة رسمية؟", { required: true, locked: true, options: ["نعم", "لا"] });
+    const who = q("short", "ما الجهة التي كان الفريق تحت مظلتها؟", { required: true, locked: true, showIf: { item: prev.id, value: "نعم" } });
+    const s = survey("طلب انضمام فريق تطوعي تحت مظلة جمعية غراس",
+      "يعبئ هذا الطلب قائد الفريق. اقرأ شروط الانضمام أولا، ثم أجب عن الأسئلة وارفع وثيقة الفريق.",
+      "الفرق التطوعية", [
+        sec("", "", [
+          q("text", "شروط الانضمام والنطاق العام", { locked: true, tone: "terms", description:
+            "• أن يكون نشاط الفريق موجها للطفل أو الأسرة، ومتوافقا مع رسالة الجمعية وقيمها.\n" +
+            "• أن يكون للفريق قائد مسؤول عنه أمام الجمعية.\n" +
+            "• الالتزام بسياسة حماية الطفل ولوائح الجمعية وهويتها في كل نشاط.\n" +
+            "• لا يجمع الفريق تبرعات ولا يوقع اتفاقيات باسم الجمعية إلا بإذن مكتوب منها.\n" +
+            "• تعبئة وثيقة الفريق وإرفاقها مع هذا الطلب." }),
+          q("short", "اسم الفريق", { required: true, locked: true }),
+          q("short", "منطقة الفريق (الحي السكني)", { required: true, locked: true, description: "مثال: حي السويدي الغربي" }),
+          q("date", "تاريخ تأسيس الفريق", { required: true, locked: true }),
+          prev, who
+        ]),
+        sec("قائد الفريق", "", [
+          q("short", "اسم قائد الفريق", { required: true, locked: true }),
+          q("paragraph", "نبذة عن قائد الفريق", { required: true, locked: true, description: "خبرته في العمل التطوعي ومع الأطفال، في أسطر قليلة", validation: { kind: "length", op: "max", a: 800, msg: "" } }),
+          q("short", "رقم جوال قائد الفريق", { required: true, locked: true, description: "مثال: 0555432555", validation: { kind: "text", op: "phone", msg: "" } })
+        ]),
+        sec("وثيقة الفريق", "", [
+          q("download", "نموذج وثيقة الفريق", { locked: true, description: "حمل النموذج، وعبئه ببيانات فريقكم، ثم صدره وارفعه في السؤال التالي.", media: { url: "", caption: "تحميل نموذج الوثيقة" } }),
+          q("file", "ارفع وثيقة الفريق بعد تعبئتها", { required: true, locked: true, description: "بوربوينت أو إكسل أو PDF، حتى ١٠ م.ب", file: { kinds: ["slides", "sheet", "pdf"], maxFiles: 1, maxMB: 10 } })
+        ])
+      ], { confirmation: "وصل طلب فريقكم، وسيتواصل معكم فريق الجمعية." });
+    s.official = true;
+    s.theme.accent = "navy";
+    return s;
+  }
+
   const T = [
+    {
+      id: "team", official: true, title: "انضمام فريق تطوعي", desc: "قالب رسمي لتسجيل الفرق تحت مظلة الجمعية", icon: "user",
+      build: teamJoin
+    },
     {
       id: "blank", title: "استبانة فارغة", desc: "ابدأ من الصفر وأضف ما تريد", icon: "plus",
       build: () => S.blank("استبانة بلا عنوان")
