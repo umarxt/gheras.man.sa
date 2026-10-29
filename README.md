@@ -61,6 +61,10 @@ cd public && python3 -m http.server 8000
 ```
 إذا كان `APPS_SCRIPT_URL` فارغا يعمل الموقع في وضع المعاينة: يقبل أي رمز دخول ولا يرسل شيئا.
 
+## منصة الاستبانات
+
+في مجلد `surveys/` موقع ثان مستقل: منصة موحدة لبناء الاستبانات داخل الجمعية، بنفس الهوية وطريقة العمل. التفاصيل في `surveys/README.md`.
+
 ## الأدوات
 
 - `.claude/skills/hairline-create`: مهارة من مكتبة [Hairline](https://github.com/lucasmarkes/hairline) (ترخيص MIT) لصنع رسومات خطية أيزومترية تتفاعل مع الماوس. للاستخدام اكتب لـ Claude: `/hairline-create` ثم وصف الفكرة.

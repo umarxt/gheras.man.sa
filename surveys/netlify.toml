@@ -1,0 +1,22 @@
+# موقع منصة الاستبانات: في Netlify اجعل Base directory = surveys
+[build]
+  publish = "public"
+
+# رابط الاستبانة القصير /s/المعرف يفتح صفحة المجيب
+[[redirects]]
+  from = "/s/*"
+  to = "/form.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

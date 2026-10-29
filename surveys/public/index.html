@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0D2142">
+  <meta name="robots" content="noindex, nofollow">
+  <title>منصة الاستبانات — غراس</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="64x64" href="/assets/favicon-64.png">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+  <link rel="preload" href="/assets/fonts/din-next-arabic.woff2" as="font" type="font/woff2" crossorigin>
+  <script>
+    try { var t = localStorage.getItem("gheras-theme"); if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t); } catch (e) {}
+  </script>
+  <link rel="stylesheet" href="/kit.css">
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body class="stage-mode">
+
+  <header class="topbar" id="topbar" hidden>
+    <div class="topbar-inner">
+      <div class="topbar-start">
+        <button class="icon-btn" id="backBtn" type="button" aria-label="رجوع إلى الاستبانات" hidden><svg class="ic" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <a href="#/" class="topbar-home" aria-label="الاستبانات">
+          <img class="topbar-logo logo-color" src="/assets/logo.png" alt="غراس">
+          <img class="topbar-logo logo-white" src="/assets/logo-white.png" alt="" aria-hidden="true">
+        </a>
+      </div>
+      <div class="topbar-title" id="topbarTitle"></div>
+      <div class="topbar-end">
+        <span class="topbar-save" id="saveState" aria-live="polite"></span>
+        <div class="topbar-actions" id="topActions"></div>
+        <button class="tt" id="themeToggle" type="button" aria-label="الوضع الليلي" aria-pressed="false">
+          <span class="tt-hole" aria-hidden="true"></span>
+          <svg class="tt-man" viewBox="0 0 12 22" aria-hidden="true">
+            <circle cx="6" cy="3.2" r="2.6"/>
+            <path class="tt-body" d="M6 6v7.5"/>
+            <path class="tt-arm" d="M6 8.5 3 11.5M6 8.5l3 3"/>
+            <path class="tt-leg tt-leg-a" d="M6 13.5 3.6 20"/>
+            <path class="tt-leg tt-leg-b" d="M6 13.5 8.4 20"/>
+          </svg>
+          <span class="tt-knob" aria-hidden="true">
+            <svg class="tt-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.6"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5.3 5.3 7 7M17 17l1.7 1.7M5.3 18.7 7 17M17 7l1.7-1.7"/></svg>
+            <svg class="tt-moon" viewBox="0 0 24 24"><path d="M20 14.6A8.2 8.2 0 0 1 9.4 4a8.2 8.2 0 1 0 10.6 10.6Z"/></svg>
+          </span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="app">
+    <!-- الدخول -->
+    <section class="screen stage" id="screenGate">
+      <div class="stage-light" aria-hidden="true"></div>
+      <div class="stage-inner">
+        <div class="stage-logo">
+          <span class="halo" aria-hidden="true"></span>
+          <img src="/assets/logo-white.png" alt="جمعية غراس لتنمية الطفل">
+        </div>
+        <div class="login-card" id="loginCard">
+          <p class="stage-kicker">منصة موحدة</p>
+          <h1 class="stage-title">بناء الاستبانات</h1>
+          <p class="stage-sub">ابن استبانتك وحدد كل تفاصيلها، وشارك رابطها، وتابع ردودها في مكان واحد</p>
+          <form class="gate-form" id="gateForm" autocomplete="off" novalidate>
+            <label class="login-label" for="accessCode">رمزك الشخصي</label>
+            <div class="code-well" id="codeWell">
+              <input id="accessCode" type="password" placeholder="أدخل الرمز" required>
+              <svg class="note-man" id="noteMan" viewBox="0 0 22 30" aria-hidden="true">
+                <circle class="head" cx="9" cy="4" r="3.2"/>
+                <path d="M9 7.5V18"/>
+                <path class="arm-back" d="M9 10 6 15"/>
+                <g class="arm-note"><path d="M9 10l5 3.5"/><rect class="notebook" x="13" y="9.5" width="6" height="8" rx="1"/><path class="pen" d="M15 12.5h2.5M15 14.5h2"/></g>
+                <path class="leg" d="M9 18 6.5 27"/><path class="leg" d="M9 18l2.5 9"/>
+              </svg>
+            </div>
+            <button type="submit" class="portal-btn" id="portalBtn">
+              <span class="btn-label" id="btnLabel"><i class="dot"></i><span>دخول</span></span>
+              <span class="portal-scene" aria-hidden="true">
+                <span class="ground"></span>
+                <span class="door"><span class="door-light"></span><span class="door-panel"><i></i></span></span>
+                <svg class="walker" id="walker" viewBox="0 0 16 30">
+                  <circle class="head" cx="8" cy="4" r="3.2"/>
+                  <path d="M8 7.5V18"/><path class="arm arm-a" d="M8 10 5.5 15.5"/><path class="arm arm-b" d="M8 10l2.5 5.5"/>
+                  <path class="leg leg-a" d="M8 18 5 27"/><path class="leg leg-b" d="M8 18l3 9"/>
+                </svg>
+              </span>
+            </button>
+            <p class="portal-caption" id="portalCaption">اضغط للدخول</p>
+            <p class="form-msg" id="gateMsg" role="alert"></p>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen admin-main" id="screenApp" hidden></section>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <footer class="footer" id="footer">
+    <div class="footer-inner">
+      <div class="footer-text">
+        <strong>جمعية غراس لتنمية الطفل</strong>
+        <span>المملكة العربية السعودية — جمعية مسجلة بالمركز الوطني لتنمية القطاع غير الربحي، ترخيص رقم: ١١٩٨</span>
+        <span>الرياض – السويدي الغربي</span>
+      </div>
+      <div class="footer-links">
+        <a href="tel:0555432555" dir="ltr">0555432555</a>
+        <a href="mailto:info@Gheras.sa" dir="ltr">info@Gheras.sa</a>
+        <a href="https://www.Gheras.sa" target="_blank" rel="noopener" dir="ltr">www.Gheras.sa</a>
+        <a href="https://x.com/GherasSA" target="_blank" rel="noopener" dir="ltr">@GherasSA</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/config.js"></script>
+  <script src="/schema.js"></script>
+  <script src="/templates.js"></script>
+  <script src="/api.js"></script>
+  <script src="/kit.js"></script>
+  <script src="/ui.js"></script>
+  <script src="/admin.js"></script>
+</body>
+</html>
