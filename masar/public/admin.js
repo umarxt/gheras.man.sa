@@ -137,7 +137,7 @@
     </article>`;
   }
   function empty(title, sub) {
-    return `<div class="empty"><svg viewBox="0 0 110 80" aria-hidden="true"><rect class="e2" x="6" y="10" width="62" height="56" rx="16"/><rect class="e1" x="36" y="10" width="68" height="56" rx="16"/></svg><strong>${title}</strong><span>${sub}</span></div>`;
+    return `<div class="empty"><svg viewBox="0 0 110 80" aria-hidden="true"><path class="e2" d="M20 30h40a12 12 0 0 1 12 12v12a12 12 0 0 1-12 12H30l-12 9v-9.6A12 12 0 0 1 8 54V42a12 12 0 0 1 12-12Z"/><path class="e1" d="M52 6h36a12 12 0 0 1 12 12v10a12 12 0 0 1-12 12h-2l5 9-12-9H52a12 12 0 0 1-12-12V18A12 12 0 0 1 52 6Z"/></svg><strong>${title}</strong><span>${sub}</span></div>`;
   }
 
   // حفظ مسودة الرد أثناء الكتابة
@@ -187,19 +187,19 @@
       const ta = $("[data-role=answer]", card), text = ta.value.trim();
       if (text.length < 2) { ta.classList.add("bad"); ta.focus(); return K.toast("اكتب الرد أولا"); }
       if (!(await confirmDlg({ title: "إرسال الرد؟", text: "سيظهر السؤال مع هذا الرد لجميع المشاركين فورا.", quote: text, ok: "إرسال" }))) return;
-      K.courier.start("جار إرسال الرد…");
-      K.courier.creep(5, 88);
+      MasarFX.courier.start("جار إرسال الرد…");
+      MasarFX.courier.creep(5, 88);
       let r;
       try { r = await A.call("answer", { code: st.code, id, answer: text }); } catch (err) { r = { ok: false, error: "تعذر الإرسال، تأكد من الاتصال" }; }
       if (r && r.ok) {
-        await K.courier.finish("وصل الرد إلى المشاركين");
-        await K.courier.hide();
+        await MasarFX.courier.finish("وصل الرد إلى المشاركين");
+        await MasarFX.courier.hide();
         draft.set(id, "");
         st.approved = st.approved.filter((i) => i !== item);
         counts(); render();
         K.toast("أرسل الرد وظهر في أسئلة المشاركين");
       } else {
-        await K.courier.hide();
+        await MasarFX.courier.hide();
         handleFail(r);
       }
     }
@@ -227,7 +227,7 @@
   }
 
   // ——— البدء ———
-  K.theme.init();
+  MasarFX.theme.init();
   const saved = ss.get();
   if (saved) {
     A.call("login", { code: saved }).then((r) => { if (r && r.ok) { st.role = r.role; enter(saved); } else { ss.set(""); show("screenGate"); } })

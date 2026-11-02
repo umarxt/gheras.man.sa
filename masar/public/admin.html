@@ -26,18 +26,18 @@
         <span class="topbar-role" id="roleChip"></span>
         <a class="topbar-back" href="./#questions"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg><span class="lg">أسئلة المشاركين</span><span class="sm">الأسئلة</span></a>
         <button class="topbar-back" id="logoutBtn" type="button">خروج</button>
-        <button class="tt" id="themeToggle" type="button" aria-label="الوضع الليلي" aria-pressed="false">
-          <span class="tt-hole" aria-hidden="true"></span>
-          <svg class="tt-man" viewBox="0 0 12 22" aria-hidden="true">
-            <circle cx="6" cy="3.2" r="2.6"/>
-            <path class="tt-body" d="M6 6v7.5"/>
-            <path class="tt-arm" d="M6 8.5 3 11.5M6 8.5l3 3"/>
-            <path class="tt-leg tt-leg-a" d="M6 13.5 3.6 20"/>
-            <path class="tt-leg tt-leg-b" d="M6 13.5 8.4 20"/>
-          </svg>
-          <span class="tt-knob" aria-hidden="true">
-            <svg class="tt-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.6"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5.3 5.3 7 7M17 17l1.7 1.7M5.3 18.7 7 17M17 7l1.7-1.7"/></svg>
-            <svg class="tt-moon" viewBox="0 0 24 24"><path d="M20 14.6A8.2 8.2 0 0 1 9.4 4a8.2 8.2 0 1 0 10.6 10.6Z"/></svg>
+        <button class="bt" id="themeToggle" type="button" aria-label="الوضع الليلي" aria-pressed="false">
+          <svg class="bt-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.4"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/></svg>
+          <span class="bt-night" aria-hidden="true"><svg class="bt-moon" viewBox="0 0 24 24"><path d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5Z"/></svg><i class="s1"></i><i class="s2"></i><i class="s3"></i></span>
+          <span class="bt-knob" aria-hidden="true">
+            <svg class="bt-book" viewBox="0 0 24 20">
+              <path class="bt-paper" d="M12 4.5C14.5 3 18 2.6 21 3.4V16.4C18 15.6 14.5 16 12 17.5Z"/>
+              <path class="bt-lines" d="M14.3 7.3c1.6-.7 3.4-.9 4.8-.7M14.3 10.1c1.6-.7 3.4-.9 4.8-.7M14.3 12.9c1.6-.7 3.4-.9 4.8-.7"/>
+              <g class="bt-page">
+                <g class="bt-front"><path class="bt-paper" d="M12 4.5C9.5 3 6 2.6 3 3.4V16.4C6 15.6 9.5 16 12 17.5Z"/><path class="bt-lines" d="M9.7 7.3c-1.6-.7-3.4-.9-4.8-.7M9.7 10.1c-1.6-.7-3.4-.9-4.8-.7M9.7 12.9c-1.6-.7-3.4-.9-4.8-.7"/></g>
+                <path class="bt-cover" d="M12 4.5C9.5 3 6 2.6 3 3.4V16.4C6 15.6 9.5 16 12 17.5Z"/>
+              </g>
+            </svg>
           </span>
         </button>
       </div>
@@ -127,39 +127,34 @@
     </form>
   </dialog>
 
-  <!-- مشهد التوصيل أثناء الإرسال -->
+  <!-- مشهد الإرسال: الطالب يرمي حقيبته في الهليكوبتر -->
   <div class="overlay" id="overlay" hidden>
     <div class="courier-wrap" role="status" aria-live="polite">
-      <div class="courier-pill" id="courierPill">
+      <div class="heli-pill" id="heliPill">
         <span class="btn-label"><i class="dot"></i><span>إرسال الرد</span></span>
-        <div class="courier-scene" aria-hidden="true">
+        <div class="heli-scene" aria-hidden="true">
           <span class="ground"></span>
-          <svg class="sender" id="sender" viewBox="0 0 16 30">
+          <span class="dust"></span>
+          <svg class="kid" id="kid" viewBox="0 0 16 30">
             <circle class="head" cx="8" cy="4" r="3.2"/>
             <path d="M8 7.5V18"/>
-            <path class="arm arm-r" d="M8 10.5 12 14"/><path class="arm arm-l" d="M8 10.5 4.5 15"/>
+            <path class="arm arm-r" d="M8 10.5 12 15"/><path class="arm arm-l" d="M8 10.5 4.5 15"/>
             <path class="leg leg-a" d="M8 18 5 27"/><path class="leg leg-b" d="M8 18l3 9"/>
           </svg>
-          <span class="parcel" id="parcel"><i></i></span>
-          <div class="scooter" id="scooter">
+          <span class="bag" id="bag"><i></i></span>
+          <div class="heli" id="heli">
             <span class="speed"><i></i><i></i><i></i></span>
-            <svg viewBox="0 0 120 54">
-              <rect class="rack" x="6" y="22" width="34" height="14" rx="3"/>
-              <rect class="stripe" x="10" y="27" width="10" height="2.4" rx="1.2"/>
-              <path class="deck" d="M24 41h70"/>
-              <rect class="seatbox" x="44" y="27" width="24" height="9" rx="4.5"/>
-              <path class="body" d="M66 36c8 0 14-1 20-6"/>
-              <rect class="lamp" x="62" y="31" width="13" height="4" rx="2"/>
-              <path class="stem" d="M94 41 88 14M84 14h8"/>
-              <g class="rider">
-                <circle class="head" cx="58" cy="7" r="3.6"/>
-                <path d="M57.5 11 55 26"/>
-                <path d="M55 26h9l2 9"/>
-                <path d="M57 15 87 15"/>
-                <path class="rider-wave" d="M57 13.5l7-7"/>
-              </g>
-              <circle class="wheel" cx="22" cy="44" r="7"/><circle class="hub" cx="22" cy="44" r="2.4"/>
-              <circle class="wheel" cx="96" cy="44" r="7"/><circle class="hub" cx="96" cy="44" r="2.4"/>
+            <svg viewBox="0 0 120 64">
+              <rect class="rotor" x="20" y="6" width="84" height="3" rx="1.5"/>
+              <rect class="mast" x="60" y="8" width="4" height="9" rx="1"/>
+              <path class="tail" d="M33 28 5 23.5V30l28 9Z"/>
+              <path class="fin" d="M2 15.5 9 17l-1.5 13H2Z"/>
+              <g class="trotor"><path d="M7 17v12M1 23h12"/></g>
+              <path class="cabin" d="M31 33c0-10 9-17 25-17h14c15 0 24 10 24 21 0 7-6 11-15 11H41c-6 0-10-6-10-15Z"/>
+              <path class="window" d="M73 20c9 .5 15.5 7 17 14H73Z"/>
+              <rect class="hatch" x="47" y="23" width="16" height="19" rx="3"/>
+              <rect class="stripe" x="34" y="41" width="56" height="3" rx="1.5"/>
+              <path class="skid" d="M38 57h47c3 0 5-1 6-3M46 48l-2 9M79 48l2 9"/>
             </svg>
           </div>
         </div>
@@ -189,6 +184,7 @@
 
   <script src="config.js"></script>
   <script src="kit.js"></script>
+  <script src="fx.js"></script>
   <script src="api.js"></script>
   <script src="admin.js"></script>
 </body>

@@ -52,19 +52,19 @@
     if (Date.now() - state.lastSent < 20000) { K.toast("انتظر قليلا قبل إرسال سؤال آخر"); return; }
     const btn = $("#sendBtn");
     btn.disabled = true;
-    K.courier.start("جار إرسال سؤالك…");
-    K.courier.creep(5, 88);
+    MasarFX.courier.start("جار إرسال سؤالك…");
+    MasarFX.courier.creep(5, 88);
     let r;
     try { r = await A.call("ask", { question: text, website: $("#website").value }); }
     catch (err) { r = { ok: false, error: "تعذر الإرسال، تأكد من الاتصال وحاول مرة أخرى" }; }
     if (r && r.ok) {
-      await K.courier.finish("وصل سؤالك");
+      await MasarFX.courier.finish("وصل سؤالك");
       q.value = ""; updateCounter();
       state.lastSent = Date.now();
       location.hash = "sent";
-      await K.courier.hide();
+      await MasarFX.courier.hide();
     } else {
-      await K.courier.hide();
+      await MasarFX.courier.hide();
       msg.textContent = (r && r.error) || "تعذر الإرسال، حاول مرة أخرى";
     }
     btn.disabled = false;
@@ -154,11 +154,11 @@
   }
 
   function empty(title, sub, extra = "") {
-    return `<div class="empty"><svg viewBox="0 0 110 80" aria-hidden="true"><rect class="e2" x="6" y="10" width="62" height="56" rx="16"/><rect class="e1" x="36" y="10" width="68" height="56" rx="16"/></svg><strong>${title}</strong><span>${sub}</span>${extra ? '<div style="margin-top:14px">' + extra + "</div>" : ""}</div>`;
+    return `<div class="empty"><svg viewBox="0 0 110 80" aria-hidden="true"><path class="e2" d="M20 30h40a12 12 0 0 1 12 12v12a12 12 0 0 1-12 12H30l-12 9v-9.6A12 12 0 0 1 8 54V42a12 12 0 0 1 12-12Z"/><path class="e1" d="M52 6h36a12 12 0 0 1 12 12v10a12 12 0 0 1-12 12h-2l5 9-12-9H52a12 12 0 0 1-12-12V18A12 12 0 0 1 52 6Z"/></svg><strong>${title}</strong><span>${sub}</span>${extra ? '<div style="margin-top:14px">' + extra + "</div>" : ""}</div>`;
   }
 
   // ——— البدء ———
-  K.theme.init();
+  MasarFX.theme.init();
   if (A.PREVIEW) console.info("منصة مسار: وضع المعاينة (لا يوجد رابط Apps Script)");
   route();
 })();
