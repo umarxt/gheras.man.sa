@@ -32,7 +32,6 @@ const PUBLISHED_CACHE = 'published-v1';
 // ===================== التهيئة (شغّلها مرة واحدة) =====================
 function setup() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  ss.setSpreadsheetLocale('ar');
   ensureSheet(ss);
 }
 
