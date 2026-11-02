@@ -160,12 +160,10 @@
       if (!textarea || !box) return;
       const buddy = $(".buddy", box);
       const sync = () => {
-        const shut = document.activeElement === textarea || textarea.value.trim().length > 0;
+        const shut = textarea.value.length > 0; // عيونه مفتوحة حتى يُكتب أول حرف
         box.classList.toggle("shut", shut);
         buddy.classList.toggle("shut", shut);
       };
-      textarea.addEventListener("focus", sync);
-      textarea.addEventListener("blur", sync);
       textarea.addEventListener("input", () => {
         sync();
         box.classList.remove("nod"); void box.offsetWidth; box.classList.add("nod");      // يهز رأسه مع الكتابة

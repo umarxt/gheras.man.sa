@@ -1096,8 +1096,9 @@ a.topbar-back { text-decoration: none; }
   transform: translate(-50%, calc(-100% - 40px)); transition: transform .6s cubic-bezier(.34, 1.4, .64, 1);
 }
 .notif.show { transform: translate(-50%, 0); }
-.notif img { width: 40px; height: 40px; flex: none; border-radius: 11px; background: #FFFFFF; box-shadow: 0 0 0 1px var(--line-soft); }
-.notif.show img { animation: ding .7s .45s ease-in-out; }
+.notif-logo { width: 72px; height: 44px; flex: none; border-radius: 12px; display: grid; place-items: center; padding: 6px 8px; background: #FFFFFF; box-shadow: 0 0 0 1px var(--line-soft); }
+.notif-logo img { width: 100%; height: auto; }
+.notif.show .notif-logo { animation: ding .7s .45s ease-in-out; }
 @keyframes ding { 20% { transform: rotate(-12deg); } 40% { transform: rotate(10deg); } 60% { transform: rotate(-6deg); } 80% { transform: rotate(3deg); } }
 .notif-t { flex: 1; min-width: 0; display: grid; line-height: 1.45; }
 .notif-t strong { font-weight: 500; font-size: 15px; }
