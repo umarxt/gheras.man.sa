@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0B2A25">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <title>أسئلة مسار</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-64.png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="preload" href="assets/fonts/din-next-arabic.woff2" as="font" type="font/woff2" crossorigin>
+  <script>
+    try { var t = localStorage.getItem("masar-theme"); if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t); } catch (e) {}
+  </script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- الشريط العلوي -->
+  <header class="topbar" id="topbar" hidden>
+    <div class="topbar-inner">
+      <a href="#" aria-label="الرئيسية"><img class="topbar-logo logo-color" src="assets/logo.png" alt="مسار"><img class="topbar-logo logo-white" src="assets/logo-white.png" alt="" aria-hidden="true"></a>
+      <div class="topbar-title" id="topbarTitle"></div>
+      <div class="topbar-end">
+        <button class="topbar-back" id="backBtn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>الرئيسية</button>
+        <button class="tt" id="themeToggle" type="button" aria-label="الوضع الليلي" aria-pressed="false">
+          <span class="tt-hole" aria-hidden="true"></span>
+          <svg class="tt-man" viewBox="0 0 12 22" aria-hidden="true">
+            <circle cx="6" cy="3.2" r="2.6"/>
+            <path class="tt-body" d="M6 6v7.5"/>
+            <path class="tt-arm" d="M6 8.5 3 11.5M6 8.5l3 3"/>
+            <path class="tt-leg tt-leg-a" d="M6 13.5 3.6 20"/>
+            <path class="tt-leg tt-leg-b" d="M6 13.5 8.4 20"/>
+          </svg>
+          <span class="tt-knob" aria-hidden="true">
+            <svg class="tt-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.6"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5.3 5.3 7 7M17 17l1.7 1.7M5.3 18.7 7 17M17 7l1.7-1.7"/></svg>
+            <svg class="tt-moon" viewBox="0 0 24 24"><path d="M20 14.6A8.2 8.2 0 0 1 9.4 4a8.2 8.2 0 1 0 10.6 10.6Z"/></svg>
+          </span>
+        </button>
+      </div>
+    </div>
+    <div class="progress" aria-hidden="true"><span id="progressFill"></span></div>
+  </header>
+
+  <main id="app">
+
+    <!-- الرئيسية: الأيقونتان -->
+    <section class="screen stage home" id="screenHome">
+      <div class="stage-light" aria-hidden="true"></div>
+      <div class="stage-inner">
+        <div class="stage-logo">
+          <span class="halo" aria-hidden="true"></span>
+          <img src="assets/logo-white.png" alt="مسار">
+        </div>
+        <p class="trust-badge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5 4 5.5v6c0 5 3.4 9 8 10.5 4.6-1.5 8-5.5 8-10.5v-6l-8-3Z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>سرية عالية الموثوقية — لا أحد يعرف من كتب السؤال</p>
+        <h1 class="stage-title">منصة أسئلة المشاركين</h1>
+        <p class="stage-sub">اسأل بحرية عن أي شيء في البرنامج، وتصفح الأسئلة التي أجابت عنها الإدارة</p>
+
+        <div class="tiles">
+          <a class="tile" href="#ask" id="tileAsk">
+            <span class="tile-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></span>
+            <span class="tile-art" aria-hidden="true">
+              <svg class="art-ask" viewBox="0 0 128 96">
+                <rect class="back" x="6" y="14" width="74" height="66" rx="18"/>
+                <rect class="front" x="40" y="14" width="82" height="66" rx="18"/>
+                <path class="ln" d="M58 38h46"/>
+                <path class="ln ln2" d="M58 55h30"/>
+                <text class="qm" x="81" y="62" text-anchor="middle" font-size="40" font-family="Brand, sans-serif">؟</text>
+                <g class="pen"><path d="M92 62 108 46l6 6-16 16-8 2Z"/></g>
+              </svg>
+            </span>
+            <span class="tile-title">اكتب سؤالك</span>
+            <span class="tile-sub">بلا اسم ولا تسجيل، يصل سؤالك إلى الإدارة مباشرة</span>
+          </a>
+          <a class="tile" href="#questions" id="tileList">
+            <span class="tile-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></span>
+            <span class="tile-art" aria-hidden="true">
+              <svg class="art-list" viewBox="0 0 128 96">
+                <g class="l1"><rect x="14" y="12" width="100" height="74" rx="18"/><rect class="dot" x="30" y="70" width="40" height="5" rx="2.5"/></g>
+                <g class="l2"><rect x="14" y="12" width="100" height="50" rx="18"/><rect class="dot" x="30" y="47" width="54" height="5" rx="2.5"/></g>
+                <g class="l3"><rect x="14" y="12" width="100" height="27" rx="18"/><rect class="dot" x="30" y="23" width="62" height="5" rx="2.5"/></g>
+              </svg>
+            </span>
+            <span class="tile-title">أسئلة المشاركين</span>
+            <span class="tile-sub">الأسئلة التي تمت الإجابة عنها، الأحدث أولا</span>
+            <span class="tile-count" id="tileCount"></span>
+          </a>
+        </div>
+        <a class="admin-link" href="admin.html">دخول الإدارة</a>
+      </div>
+    </section>
+
+    <!-- اكتب سؤالك -->
+    <section class="screen app" id="screenAsk" hidden>
+      <div class="wrap step">
+        <div class="step-hero">
+          <div>
+            <p class="eyebrow">اكتب سؤالك</p>
+            <h1>اسأل بحرية</h1>
+            <p class="lead">سؤالك يصل إلى إدارة البرنامج دون أن يعرف أحد من أنت</p>
+          </div>
+          <svg class="hero-art" viewBox="0 0 128 96" aria-hidden="true"><rect x="6" y="14" width="74" height="66" rx="18" fill="#B0EBD2"/><rect x="40" y="14" width="82" height="66" rx="18" fill="#9FE3F1"/><text x="81" y="62" text-anchor="middle" font-size="40" fill="#15463F" font-family="Brand, sans-serif">؟</text></svg>
+        </div>
+        <div class="band" aria-hidden="true"></div>
+
+        <div class="trust" role="note">
+          <span class="trust-shield" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2.5 4 5.5v6c0 5 3.4 9 8 10.5 4.6-1.5 8-5.5 8-10.5v-6l-8-3Z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg></span>
+          <div>
+            <h2>سرية تامة <span class="trust-level">موثوقية عالية</span> <span class="trust-meter" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span></h2>
+            <ul>
+              <li>لا نطلب اسمك ولا رقمك ولا بريدك، ولا يوجد تسجيل دخول.</li>
+              <li>لا يحفظ مع السؤال أي شيء يدل عليك: لا جهاز ولا عنوان إنترنت ولا ملفات تعريف.</li>
+              <li>الإدارة نفسها ترى نص السؤال فقط، ولا تستطيع معرفة من كتبه.</li>
+              <li>لا ينشر السؤال إلا بعد مراجعته والإجابة عنه.</li>
+            </ul>
+            <p class="tip">للحفاظ على سريتك: لا تكتب اسمك أو تفاصيل تدل عليك داخل السؤال.</p>
+          </div>
+        </div>
+
+        <form class="card ask-card" id="askForm" novalidate>
+          <div class="field">
+            <label for="question">سؤالك</label>
+            <textarea class="textarea" id="question" placeholder="اكتب سؤالك هنا…" autocomplete="off" spellcheck="true"></textarea>
+            <div class="field-foot"><p class="hint" id="askMsg" role="alert"></p><span class="counter" id="counter"></span></div>
+          </div>
+          <!-- حقل فخ للبرامج الآلية، لا يراه الإنسان -->
+          <div class="hp" aria-hidden="true"><label for="website">اتركه فارغا</label><input id="website" tabindex="-1" autocomplete="off"></div>
+          <div class="actions">
+            <p class="hint">يظهر سؤالك في «أسئلة المشاركين» بعد الإجابة عنه</p>
+            <button class="btn btn-primary btn-lg btn-icon" type="submit" id="sendBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4 9.5 14.5M20 4l-6.5 16-4-5.5L4 10.5 20 4Z"/></svg>إرسال السؤال</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- أسئلة المشاركين -->
+    <section class="screen app" id="screenList" hidden>
+      <div class="wrap step">
+        <div class="step-hero">
+          <div>
+            <p class="eyebrow">أسئلة المشاركين</p>
+            <h1>أسئلة وإجابات</h1>
+            <p class="lead" id="listLead">الأسئلة التي أجابت عنها إدارة البرنامج</p>
+          </div>
+          <div class="axis-num" id="totalNum" aria-hidden="true"></div>
+        </div>
+        <div class="band" aria-hidden="true"></div>
+
+        <div class="tabs" role="tablist" aria-label="تصنيف الأسئلة">
+          <button class="tab" role="tab" id="tabRecent" aria-selected="true" aria-controls="listHost" data-tab="recent"><span class="tab-t">الأحدث<small>آخر ٢٤ ساعة</small></span><span class="tab-count hot" id="cRecent">٠</span></button>
+          <button class="tab" role="tab" id="tabAll" aria-selected="false" aria-controls="listHost" data-tab="all"><span class="tab-t">كل الأسئلة المجابة<small>الأرشيف كاملا</small></span><span class="tab-count" id="cAll">٠</span></button>
+        </div>
+        <div class="search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>
+          <input class="input" id="search" type="search" placeholder="ابحث في الأسئلة والإجابات" aria-label="بحث">
+        </div>
+        <div class="list" id="listHost" role="tabpanel" aria-live="polite"></div>
+        <div class="more" id="moreWrap" hidden><button class="btn btn-ghost" id="moreBtn" type="button">عرض المزيد</button></div>
+      </div>
+    </section>
+
+    <!-- بعد الإرسال -->
+    <section class="screen stage" id="screenSent" hidden>
+      <div class="stage-light" aria-hidden="true"></div>
+      <div class="stage-inner">
+        <svg class="done-mark" viewBox="0 0 120 120" aria-hidden="true">
+          <circle cx="60" cy="60" r="54" fill="none" stroke-width="5"/>
+          <path d="M38 62 L54 78 L84 46" fill="none" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <p class="stage-kicker">وصل سؤالك</p>
+        <h1 class="stage-title">شكرا لك</h1>
+        <p class="stage-sub">ستراجعه الإدارة وتجيب عنه، ثم يظهر مع إجابته في «أسئلة المشاركين». لم يحفظ أي شيء يدل عليك.</p>
+        <p class="ref"></p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <button class="btn btn-onstage" id="againBtn" type="button">سؤال آخر</button>
+          <button class="btn btn-onstage" id="toListBtn" type="button">أسئلة المشاركين</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- مشهد التوصيل أثناء الإرسال -->
+  <div class="overlay" id="overlay" hidden>
+    <div class="courier-wrap" role="status" aria-live="polite">
+      <div class="courier-pill" id="courierPill">
+        <span class="btn-label"><i class="dot"></i><span>إرسال السؤال</span></span>
+        <div class="courier-scene" aria-hidden="true">
+          <span class="ground"></span>
+          <svg class="sender" id="sender" viewBox="0 0 16 30">
+            <circle class="head" cx="8" cy="4" r="3.2"/>
+            <path d="M8 7.5V18"/>
+            <path class="arm arm-r" d="M8 10.5 12 14"/><path class="arm arm-l" d="M8 10.5 4.5 15"/>
+            <path class="leg leg-a" d="M8 18 5 27"/><path class="leg leg-b" d="M8 18l3 9"/>
+          </svg>
+          <span class="parcel" id="parcel"><i></i></span>
+          <div class="scooter" id="scooter">
+            <span class="speed"><i></i><i></i><i></i></span>
+            <svg viewBox="0 0 120 54">
+              <rect class="rack" x="6" y="22" width="34" height="14" rx="3"/>
+              <rect class="stripe" x="10" y="27" width="10" height="2.4" rx="1.2"/>
+              <path class="deck" d="M24 41h70"/>
+              <rect class="seatbox" x="44" y="27" width="24" height="9" rx="4.5"/>
+              <path class="body" d="M66 36c8 0 14-1 20-6"/>
+              <rect class="lamp" x="62" y="31" width="13" height="4" rx="2"/>
+              <path class="stem" d="M94 41 88 14M84 14h8"/>
+              <g class="rider">
+                <circle class="head" cx="58" cy="7" r="3.6"/>
+                <path d="M57.5 11 55 26"/>
+                <path d="M55 26h9l2 9"/>
+                <path d="M57 15 87 15"/>
+                <path class="rider-wave" d="M57 13.5l7-7"/>
+              </g>
+              <circle class="wheel" cx="22" cy="44" r="7"/><circle class="hub" cx="22" cy="44" r="2.4"/>
+              <circle class="wheel" cx="96" cy="44" r="7"/><circle class="hub" cx="96" cy="44" r="2.4"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <p class="courier-label" id="overlayText">جار الإرسال…</p>
+      <div class="bar" id="courierBar"><span id="overlayBar"></span></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <footer class="footer" id="footer">
+    <div class="footer-inner">
+      <div class="footer-text">
+        <strong>برنامج مسار — جمعية غراس لتنمية الطفل</strong>
+        <span>المملكة العربية السعودية — جمعية مسجلة بالمركز الوطني لتنمية القطاع غير الربحي، ترخيص رقم: ١١٩٨</span>
+        <span>الرياض – السويدي الغربي</span>
+      </div>
+      <div class="footer-links">
+        <a href="tel:0555432555" dir="ltr">0555432555</a>
+        <a href="mailto:info@Gheras.sa" dir="ltr">info@Gheras.sa</a>
+        <a href="https://www.Gheras.sa" target="_blank" rel="noopener noreferrer" dir="ltr">www.Gheras.sa</a>
+        <a href="https://x.com/GherasSA" target="_blank" rel="noopener noreferrer" dir="ltr">@GherasSA</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="config.js"></script>
+  <script src="kit.js"></script>
+  <script src="api.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
