@@ -940,3 +940,9 @@ body.stage-mode .footer { background: var(--surface); border-color: var(--line-s
 body.stage-mode .footer-text strong { color: var(--ink-2); }
 :root[data-theme="dark"] .portal-btn .walker { stroke: var(--accent-ink); }
 .stage::before { background: none; }
+a.topbar-back { text-decoration: none; }
+.gate-back { justify-self: center; margin-top: 26px; font-size: 14px; }
+@media (max-width: 640px) { .topbar-end { gap: 8px; } .topbar-back { padding: 7px 12px; font-size: 13px; } }
+.topbar-back { white-space: nowrap; }
+.topbar-back .sm { display: none; }
+@media (max-width: 640px) { .topbar-back .lg { display: none; } .topbar-back .sm { display: inline; } .topbar-back svg { display: none; } }

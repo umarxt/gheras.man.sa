@@ -20,10 +20,11 @@
 
   <header class="topbar" id="topbar" hidden>
     <div class="topbar-inner">
-      <img class="topbar-logo logo-color" src="assets/logo.png" alt="مسار"><img class="topbar-logo logo-white" src="assets/logo-white.png" alt="" aria-hidden="true">
+      <a href="./" aria-label="صفحة المشاركين"><img class="topbar-logo logo-color" src="assets/logo.png" alt="مسار"><img class="topbar-logo logo-white" src="assets/logo-white.png" alt="" aria-hidden="true"></a>
       <div class="topbar-title">لوحة الإدارة</div>
       <div class="topbar-end">
         <span class="topbar-role" id="roleChip"></span>
+        <a class="topbar-back" href="./#questions"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg><span class="lg">أسئلة المشاركين</span><span class="sm">الأسئلة</span></a>
         <button class="topbar-back" id="logoutBtn" type="button">خروج</button>
         <button class="tt" id="themeToggle" type="button" aria-label="الوضع الليلي" aria-pressed="false">
           <span class="tt-hole" aria-hidden="true"></span>
@@ -84,6 +85,7 @@
             <p class="form-msg" id="gateMsg" role="alert"></p>
           </form>
         </div>
+        <a class="admin-link gate-back" href="./#questions">رجوع إلى أسئلة المشاركين</a>
       </div>
     </section>
 
