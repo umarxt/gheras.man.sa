@@ -125,7 +125,26 @@
         <form class="card ask-card" id="askForm" novalidate>
           <div class="field">
             <label for="question">سؤالك</label>
-            <textarea class="textarea" id="question" placeholder="اكتب سؤالك هنا…" autocomplete="off" spellcheck="true"></textarea>
+            <div class="q-well">
+              <textarea class="textarea" id="question" placeholder="اكتب سؤالك هنا…" autocomplete="off" spellcheck="true"></textarea>
+              <!-- صاحبنا يغمض عيونه أثناء الكتابة: لا أحد يرى من يكتب -->
+              <div class="peek" id="peek" aria-hidden="true">
+                <span class="peek-say">مغمض عيوني، ما أشوف</span>
+            <svg class="buddy" viewBox="0 0 30 44">
+              <path class="b-body" d="M15 18v13"/>
+              <path class="b-arm b-arm-l" d="M15 21l-6 5"/>
+              <path class="b-arm b-arm-r" d="M15 21l6 5"/>
+              <path class="b-leg b-leg-a" d="M15 31l-4 10"/>
+              <path class="b-leg b-leg-b" d="M15 31l4 10"/>
+              <circle class="b-head" cx="15" cy="10" r="8"/>
+              <path class="b-cap" d="M7 4.6 15 1.2l8 3.4-8 3.4Z"/><path class="b-tassel" d="M21 5.3v4"/>
+              <g class="b-open"><circle cx="12" cy="10" r="1.25"/><circle cx="18" cy="10" r="1.25"/></g>
+              <path class="b-shut" d="M10.3 10.2q1.7 1.5 3.4 0M16.3 10.2q1.7 1.5 3.4 0"/>
+              <path class="b-smile" d="M13 14q2 1.4 4 0"/>
+              <circle class="b-cheek" cx="10" cy="13" r="1.2"/><circle class="b-cheek" cx="20" cy="13" r="1.2"/>
+            </svg>
+              </div>
+            </div>
             <div class="field-foot"><p class="hint" id="askMsg" role="alert"></p><span class="counter" id="counter"></span></div>
           </div>
           <!-- حقل فخ للبرامج الآلية، لا يراه الإنسان -->
@@ -182,34 +201,31 @@
     </section>
   </main>
 
-  <!-- مشهد الإرسال: الطالب يرمي حقيبته في الهليكوبتر -->
+  <!-- مشهد الإرسال: صاحبنا بعيونه المغمضة يطوي السؤال طائرة ورقية ويطيّرها -->
   <div class="overlay" id="overlay" hidden>
     <div class="courier-wrap" role="status" aria-live="polite">
-      <div class="heli-pill" id="heliPill">
+      <div class="plane-pill" id="planePill">
         <span class="btn-label"><i class="dot"></i><span>إرسال السؤال</span></span>
-        <div class="heli-scene" aria-hidden="true">
+        <div class="plane-scene" aria-hidden="true">
           <span class="ground"></span>
-          <span class="dust"></span>
-          <svg class="kid" id="kid" viewBox="0 0 16 30">
-            <circle class="head" cx="8" cy="4" r="3.2"/>
-            <path d="M8 7.5V18"/>
-            <path class="arm arm-r" d="M8 10.5 12 15"/><path class="arm arm-l" d="M8 10.5 4.5 15"/>
-            <path class="leg leg-a" d="M8 18 5 27"/><path class="leg leg-b" d="M8 18l3 9"/>
-          </svg>
-          <span class="bag" id="bag"><i></i></span>
-          <div class="heli" id="heli">
-            <span class="speed"><i></i><i></i><i></i></span>
-            <svg viewBox="0 0 120 64">
-              <rect class="rotor" x="20" y="6" width="84" height="3" rx="1.5"/>
-              <rect class="mast" x="60" y="8" width="4" height="9" rx="1"/>
-              <path class="tail" d="M33 28 5 23.5V30l28 9Z"/>
-              <path class="fin" d="M2 15.5 9 17l-1.5 13H2Z"/>
-              <g class="trotor"><path d="M7 17v12M1 23h12"/></g>
-              <path class="cabin" d="M31 33c0-10 9-17 25-17h14c15 0 24 10 24 21 0 7-6 11-15 11H41c-6 0-10-6-10-15Z"/>
-              <path class="window" d="M73 20c9 .5 15.5 7 17 14H73Z"/>
-              <rect class="hatch" x="47" y="23" width="16" height="19" rx="3"/>
-              <rect class="stripe" x="34" y="41" width="56" height="3" rx="1.5"/>
-              <path class="skid" d="M38 57h47c3 0 5-1 6-3M46 48l-2 9M79 48l2 9"/>
+          <svg class="buddy shut runner" id="runner" viewBox="0 0 30 44">
+              <path class="b-body" d="M15 18v13"/>
+              <path class="b-arm b-arm-l" d="M15 21l-6 5"/>
+              <path class="b-arm b-arm-r" d="M15 21l6 5"/>
+              <path class="b-leg b-leg-a" d="M15 31l-4 10"/>
+              <path class="b-leg b-leg-b" d="M15 31l4 10"/>
+              <circle class="b-head" cx="15" cy="10" r="8"/>
+              <path class="b-cap" d="M7 4.6 15 1.2l8 3.4-8 3.4Z"/><path class="b-tassel" d="M21 5.3v4"/>
+              <g class="b-open"><circle cx="12" cy="10" r="1.25"/><circle cx="18" cy="10" r="1.25"/></g>
+              <path class="b-shut" d="M10.3 10.2q1.7 1.5 3.4 0M16.3 10.2q1.7 1.5 3.4 0"/>
+              <path class="b-smile" d="M13 14q2 1.4 4 0"/>
+              <circle class="b-cheek" cx="10" cy="13" r="1.2"/><circle class="b-cheek" cx="20" cy="13" r="1.2"/>
+            </svg>
+          <div class="paper" id="paper">
+            <svg viewBox="0 0 40 30">
+              <g class="pp-sheet"><rect x="9" y="2" width="22" height="26" rx="1.5"/><path class="pp-ln" d="M13 9h14M13 13.5h14M13 18h9"/></g>
+              <g class="pp-fold"><path d="M9 28V12.5L20 2l11 10.5V28Z"/><path class="pp-ln" d="M20 2v26M9 12.5h22"/></g>
+              <g class="pp-plane"><path d="M2 15 38 7 14 19.5Z"/><path class="pp-keel" d="M14 19.5 38 7 19 26Z"/></g>
             </svg>
           </div>
         </div>
@@ -217,6 +233,13 @@
       <p class="courier-label" id="overlayText">جار الإرسال…</p>
       <div class="bar" id="courierBar"><span id="overlayBar"></span></div>
     </div>
+  </div>
+
+  <!-- إشعار «تم الإرسال» -->
+  <div class="notif" id="notif" role="status" aria-live="polite">
+    <img src="assets/apple-touch-icon.png" alt="" width="40" height="40">
+    <div class="notif-t"><strong>منصة مسار</strong><span>تم الإرسال، وصل سؤالك دون اسم</span></div>
+    <time>الآن</time>
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>

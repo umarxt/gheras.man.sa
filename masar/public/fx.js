@@ -1,7 +1,9 @@
 /* حركات منصة مسار الخاصة بالطلاب
    MasarFX.theme   زر الليل والنهار: كتاب يُغلق فيحل الليل، ويُفتح فتشرق الشمس
-   MasarFX.courier مشهد الإرسال: طالب يرمي حقيبته في هليكوبتر، فتقلع الهليكوبتر
-   (نفس واجهة GherasKit.courier: start / creep / progress / finish / hide) */
+   MasarFX.courier مشهد الإرسال في الإدارة: طالب يرمي حقيبته في هليكوبتر، فتقلع
+   MasarFX.plane   مشهد الإرسال عند الطلاب: صاحبنا بعيونه المغمضة يطوي السؤال طائرة ورقية ويطيّرها، ثم إشعار «تم الإرسال»
+   MasarFX.peek    صاحبنا بجانب خانة السؤال: يغمض عيونه أثناء الكتابة
+   (courier وplane بنفس واجهة GherasKit.courier: start / creep / progress / finish / hide) */
 (function () {
   "use strict";
   const K = GherasKit, $ = K.$, W = K.W;
@@ -104,5 +106,73 @@
     async hide() { clearInterval(this.timer); await this.intro; $("#overlay").hidden = true; }
   };
 
-  window.MasarFX = { theme, courier };
+  // ——— الإرسال عند الطلاب: الطائرة الورقية ———
+  const plane = Object.assign(Object.create(courier), {
+    start(firstLabel) {
+      this.intro = (async () => {
+        const pill = $("#planePill"), runner = $("#runner"), paper = $("#paper");
+        pill.className = "plane-pill";
+        runner.setAttribute("class", "buddy shut runner");
+        paper.className = "paper";
+        $("#courierBar").classList.remove("active");
+        this.setBar(0);
+        $("#overlayText").textContent = firstLabel || "";
+        $("#overlay").hidden = false;
+        await W(400);
+        pill.classList.add("playing");
+        $("#courierBar").classList.add("active");
+        await W(300);
+        runner.setAttribute("class", "buddy shut runner walking"); pill.classList.add("walk"); // يمشي وعيونه مغمضة والورقة بيده
+        await W(1000);
+        runner.setAttribute("class", "buddy shut runner");
+        pill.classList.add("folding");
+        paper.classList.add("s-fold"); await W(380);                                         // يطوي الورقة
+        paper.classList.add("s-plane"); await W(420);                                        // صارت طائرة
+        pill.classList.add("ready");                                                          // يرفعها وينتظر اكتمال الإرسال
+      })();
+      return this.intro;
+    },
+    async finish(doneLabel = "تم الإرسال") {
+      clearInterval(this.timer);
+      this.setBar(100);
+      this.label(doneLabel);
+      await this.intro;
+      $("#planePill").classList.add("throw");
+      $("#paper").classList.add("fly");                                                      // تطير الطائرة
+      await W(1250);
+      notify();
+      await W(900);
+    }
+  });
+
+  // إشعار «تم الإرسال» ينزل من أعلى الشاشة ثم يختفي
+  function notify() {
+    const n = $("#notif");
+    if (!n) return;
+    n.classList.remove("show"); void n.offsetWidth; n.classList.add("show");
+    clearTimeout(n._h);
+    n._h = setTimeout(() => n.classList.remove("show"), 4200);
+  }
+
+  // ——— صاحبنا بجانب خانة السؤال ———
+  const peek = {
+    bind(textarea, box) {
+      if (!textarea || !box) return;
+      const buddy = $(".buddy", box);
+      const sync = () => {
+        const shut = document.activeElement === textarea || textarea.value.trim().length > 0;
+        box.classList.toggle("shut", shut);
+        buddy.classList.toggle("shut", shut);
+      };
+      textarea.addEventListener("focus", sync);
+      textarea.addEventListener("blur", sync);
+      textarea.addEventListener("input", () => {
+        sync();
+        box.classList.remove("nod"); void box.offsetWidth; box.classList.add("nod");      // يهز رأسه مع الكتابة
+      });
+      sync();
+    }
+  };
+
+  window.MasarFX = { theme, courier, plane, peek, notify };
 })();

@@ -41,6 +41,7 @@
     counter.textContent = A.toAr(n) + " / " + A.toAr(MAXQ);
     counter.classList.toggle("over", n > MAXQ);
   }
+  MasarFX.peek.bind(q, $("#peek"));
   q.addEventListener("input", () => { updateCounter(); q.classList.remove("bad"); msg.textContent = ""; });
   updateCounter();
 
@@ -52,19 +53,19 @@
     if (Date.now() - state.lastSent < 20000) { K.toast("انتظر قليلا قبل إرسال سؤال آخر"); return; }
     const btn = $("#sendBtn");
     btn.disabled = true;
-    MasarFX.courier.start("جار إرسال سؤالك…");
-    MasarFX.courier.creep(5, 88);
+    MasarFX.plane.start("جار إرسال سؤالك…");
+    MasarFX.plane.creep(5, 88);
     let r;
     try { r = await A.call("ask", { question: text, website: $("#website").value }); }
     catch (err) { r = { ok: false, error: "تعذر الإرسال، تأكد من الاتصال وحاول مرة أخرى" }; }
     if (r && r.ok) {
-      await MasarFX.courier.finish("وصل سؤالك");
+      await MasarFX.plane.finish("وصل سؤالك");
       q.value = ""; updateCounter();
       state.lastSent = Date.now();
       location.hash = "sent";
-      await MasarFX.courier.hide();
+      await MasarFX.plane.hide();
     } else {
-      await MasarFX.courier.hide();
+      await MasarFX.plane.hide();
       msg.textContent = (r && r.error) || "تعذر الإرسال، حاول مرة أخرى";
     }
     btn.disabled = false;

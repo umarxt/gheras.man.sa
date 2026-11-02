@@ -1001,3 +1001,105 @@ a.topbar-back { text-decoration: none; }
 
 /* الحالات الفارغة */
 .empty .e1 { fill: var(--chip); } .empty .e2 { fill: var(--line-soft); }
+
+/* ================================================================
+   صاحبنا: طالب بقبعة تخرج، يغمض عيونه أثناء كتابة السؤال
+   ================================================================ */
+.buddy { overflow: visible; }
+.buddy .b-body, .buddy .b-arm, .buddy .b-leg { fill: none; stroke: var(--kid); stroke-width: 2; stroke-linecap: round; }
+.buddy .b-head { fill: var(--mint); stroke: var(--deep); stroke-width: 1.2; }
+.buddy .b-cap { fill: var(--heli); }
+.buddy .b-tassel { fill: none; stroke: var(--olive); stroke-width: 1.3; stroke-linecap: round; }
+.buddy .b-open circle { fill: var(--deep); }
+.buddy .b-shut { fill: none; stroke: var(--deep); stroke-width: 1.3; stroke-linecap: round; opacity: 0; }
+.buddy .b-smile { fill: none; stroke: var(--deep); stroke-width: 1.1; stroke-linecap: round; }
+.buddy .b-cheek { fill: var(--olive); opacity: 0; }
+.buddy .b-open, .buddy .b-shut, .buddy .b-cheek { transition: opacity .18s; }
+.buddy.shut .b-open { opacity: 0; }
+.buddy.shut .b-shut { opacity: 1; }
+.buddy.shut .b-cheek { opacity: .45; }
+.buddy:not(.shut) .b-open { transform-box: fill-box; transform-origin: center; animation: blink 3.6s infinite; }
+@keyframes blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.1); } }
+.buddy .b-arm { transform-box: view-box; transform-origin: 15px 21px; transition: transform .3s var(--ease-out); }
+.buddy .b-leg { transform-box: view-box; transform-origin: 15px 31px; }
+.buddy.walking .b-leg-a { animation: legA .3s ease-in-out infinite alternate; }
+.buddy.walking .b-leg-b { animation: legA .3s ease-in-out infinite alternate-reverse; }
+
+/* بجانب خانة السؤال */
+.q-well { position: relative; }
+.q-well .textarea { padding-bottom: 62px; }
+.peek { position: absolute; left: 14px; bottom: 9px; display: flex; align-items: flex-end; gap: 8px; direction: ltr; pointer-events: none; }
+.peek .buddy { width: 28px; height: 41px; transform-origin: 50% 100%; }
+.peek.nod .buddy { animation: nod .32s ease-in-out; }
+@keyframes nod { 40% { transform: rotate(-5deg) translateY(1px); } }
+.peek-say {
+  order: 2; margin-bottom: 22px; font-size: 12.5px; line-height: 1.4; white-space: nowrap; direction: rtl;
+  color: var(--accent); background: var(--chip); border-radius: 12px 12px 12px 3px; padding: 4px 10px;
+  opacity: 0; transform: translateY(6px) scale(.9); transform-origin: 0 100%;
+  transition: opacity .25s, transform .35s cubic-bezier(.34, 1.56, .64, 1);
+}
+.peek.shut .peek-say { opacity: 1; transform: none; }
+
+/* ================================================================
+   الإرسال عند الطلاب: يطوي السؤال طائرة ورقية ويطيّرها
+   ================================================================ */
+.plane-pill {
+  position: relative; width: 100%; height: 132px; border-radius: 34px; overflow: hidden;
+  background: var(--bg); box-shadow: var(--neu-out); border: 1px solid var(--line-soft);
+}
+.plane-pill .btn-label { color: var(--ink-2); }
+.plane-pill .btn-label .dot { background: var(--olive); box-shadow: none; }
+.plane-pill.playing .btn-label { opacity: 0; transform: translateY(-6px); }
+.plane-scene { position: absolute; inset: 0; direction: ltr; opacity: 0; transition: opacity .35s .1s; }
+.plane-pill.playing .plane-scene { opacity: 1; }
+.plane-scene .ground { position: absolute; left: 6%; right: 6%; bottom: 24px; height: 1.5px; border-radius: 2px; background: var(--line); }
+.runner { position: absolute; left: 6%; bottom: 24px; width: 36px; height: 53px; transition: left 1s linear; }
+.plane-pill.walk .runner { left: 28%; }
+.plane-pill.folding .runner .b-arm-r { transform: rotate(-40deg); }
+.plane-pill.ready .runner .b-arm-r { transform: rotate(-125deg); }
+.plane-pill.throw .runner .b-arm-r { animation: throwArm .45s var(--ease-out) forwards; }
+@keyframes throwArm { from { transform: rotate(-125deg); } to { transform: rotate(-15deg); } }
+.plane-pill.throw .runner .b-arm-l { animation: byeArm .3s .5s ease-in-out infinite alternate; }
+@keyframes byeArm { from { transform: rotate(95deg); } to { transform: rotate(135deg); } }
+/* الورقة ← الطي ← الطائرة */
+.paper { position: absolute; left: calc(6% + 22px); bottom: 32px; width: 36px; height: 27px; transition: left 1s linear, transform .35s var(--ease-out); }
+.paper svg { width: 100%; height: 100%; overflow: visible; display: block; }
+.plane-pill.walk .paper { left: calc(28% + 22px); }
+.paper g { transform-box: view-box; transform-origin: 20px 15px; transition: opacity .2s, transform .35s var(--ease-out); }
+.paper path, .paper rect { fill: #FFFFFF; stroke: var(--deep); stroke-width: 1.3; stroke-linejoin: round; }
+.paper .pp-ln { fill: none; stroke: var(--blue); stroke-width: 1.2; stroke-linecap: round; }
+.paper .pp-keel { fill: var(--sky); }
+.paper .pp-fold, .paper .pp-plane { opacity: 0; transform: scale(.6) rotate(-10deg); }
+.paper.s-fold .pp-sheet { opacity: 0; transform: scale(.7, .5) translateY(6px); }
+.paper.s-fold .pp-fold { opacity: 1; transform: none; }
+.paper.s-plane .pp-fold { opacity: 0; transform: scale(.4); }
+.paper.s-plane .pp-plane { opacity: 1; transform: none; }
+.plane-pill.folding .paper { animation: wiggle .38s ease-in-out 2; }
+@keyframes wiggle { 50% { transform: rotate(-8deg) translateY(-2px); } }
+.plane-pill.ready .paper { animation: none; transform: translate(10px, -40px) rotate(-10deg); }
+.paper.fly { animation: fly 1.25s cubic-bezier(.35, .1, .6, 1) forwards !important; }
+@keyframes fly {
+  0% { transform: translate(10px, -40px) rotate(-10deg); }
+  22% { transform: translate(70px, -62px) rotate(-18deg); }
+  42% { transform: translate(140px, -58px) rotate(6deg); }
+  58% { transform: translate(200px, -40px) rotate(18deg); }
+  76% { transform: translate(290px, -56px) rotate(-14deg); }
+  100% { transform: translate(470px, -120px) rotate(-22deg); opacity: .9; }
+}
+
+/* إشعار «تم الإرسال» */
+.notif {
+  position: fixed; z-index: 80; top: calc(14px + env(safe-area-inset-top, 0px)); left: 50%;
+  width: min(400px, calc(100% - 32px)); display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; border-radius: 20px; background: var(--surface); color: var(--ink);
+  box-shadow: 0 18px 44px rgba(12, 40, 35, .2), 0 0 0 1px var(--line-soft);
+  transform: translate(-50%, calc(-100% - 40px)); transition: transform .6s cubic-bezier(.34, 1.4, .64, 1);
+}
+.notif.show { transform: translate(-50%, 0); }
+.notif img { width: 40px; height: 40px; flex: none; border-radius: 11px; background: #FFFFFF; box-shadow: 0 0 0 1px var(--line-soft); }
+.notif.show img { animation: ding .7s .45s ease-in-out; }
+@keyframes ding { 20% { transform: rotate(-12deg); } 40% { transform: rotate(10deg); } 60% { transform: rotate(-6deg); } 80% { transform: rotate(3deg); } }
+.notif-t { flex: 1; min-width: 0; display: grid; line-height: 1.45; }
+.notif-t strong { font-weight: 500; font-size: 15px; }
+.notif-t span { font-size: 14px; color: var(--ink-2); }
+.notif time { align-self: flex-start; font-size: 12px; color: var(--muted); }
