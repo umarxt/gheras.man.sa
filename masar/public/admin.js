@@ -133,7 +133,10 @@
       <textarea class="textarea" id="a-${A.esc(i.id)}" data-role="answer" maxlength="${MAXA}" placeholder="اكتب الرد هنا…">${A.esc(d)}</textarea>
       <div class="adm-actions">
         <button class="btn btn-primary btn-sm btn-icon" data-act="answer" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4 9.5 14.5M20 4l-6.5 16-4-5.5L4 10.5 20 4Z"/></svg>إرسال</button>
-      </div>` : `<p class="edit-note">بانتظار رد مدير الرد</p>`}
+      </div>` : `<p class="edit-note">بانتظار رد مدير الرد</p>
+      <div class="adm-actions">
+        <button class="btn btn-ghost-line btn-sm btn-icon" data-act="unapprove" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>إلغاء الاعتماد</button>
+      </div>`}
     </article>`;
   }
   function empty(title, sub) {
@@ -175,6 +178,13 @@
       if (!(await confirmDlg({ title: "حذف السؤال؟", text: "لن يظهر هذا السؤال لأحد.", quote: item.q, ok: "حذف", danger: true }))) return;
       return act1(card, b, "delete", { id }, "حُذف السؤال، ولن يظهر لأحد", () => { st.fresh = st.fresh.filter((i) => i !== item); });
     }
+    if (act === "unapprove") {
+      if (!(await confirmDlg({ title: "إلغاء اعتماد السؤال؟", text: "يرجع السؤال إلى «الأسئلة الجديدة» ويختفي من عند مدير الرد، وتقدر تعدله أو تعتمده أو تحذفه من جديد.", quote: item.q, ok: "إلغاء الاعتماد" }))) return;
+      return act1(card, b, "unapprove", { id }, "أُلغي الاعتماد، ورجع السؤال إلى الأسئلة الجديدة", (r) => {
+        st.approved = st.approved.filter((i) => i !== item);
+        st.fresh.push(Object.assign({}, item, { q: (r && r.q) || item.q, approved: "" }));
+      });
+    }
     if (act === "approve") {
       const ta = $("[data-role=qtext]", card), text = ta.value.trim();
       if (text.length < 3) { ta.classList.add("bad"); ta.focus(); return K.toast("نص السؤال فارغ"); }
@@ -212,7 +222,7 @@
     if (r && r.ok) {
       card.classList.add("leaving");
       await K.W(420);
-      apply(); counts(); render();
+      apply(r); counts(); render();
       MasarFX.notify(okMsg);
     } else {
       $$("button", card).forEach((x) => (x.disabled = false));

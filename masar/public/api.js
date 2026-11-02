@@ -61,9 +61,16 @@
       case "approve": case "delete": {
         if (role !== "supervisor") return { ok: false, error: "هذا الإجراء للمدير المعتمد فقط" };
         const i = find(x.id); if (!i || i.status !== "جديد") return { ok: false, error: "السؤال غير موجود أو تغيرت حالته" };
-        if (action === "approve") { if (x.question) i.q = String(x.question).trim(); i.status = "معتمد"; i.approved = new Date().toISOString(); }
+        if (action === "approve") { if (x.question && x.question.trim() !== i.q) { i.orig = i.q; i.q = String(x.question).trim(); } i.status = "معتمد"; i.approved = new Date().toISOString(); }
         else i.status = "محذوف";
         save(d); return { ok: true };
+      }
+      case "unapprove": {
+        if (role !== "supervisor") return { ok: false, error: "هذا الإجراء للمدير المعتمد فقط" };
+        const i = find(x.id); if (!i || i.status !== "معتمد") return { ok: false, error: "السؤال غير موجود أو تغيرت حالته" };
+        if (i.orig) { i.q = i.orig; i.orig = ""; }
+        i.status = "جديد"; i.approved = "";
+        save(d); return { ok: true, q: i.q };
       }
       case "answer": {
         const i = find(x.id); if (!i || i.status !== "معتمد") return { ok: false, error: "السؤال غير موجود أو تغيرت حالته" };

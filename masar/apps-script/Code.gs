@@ -85,6 +85,7 @@ function doPost(e) {
       case 'list': return json(list(role));
       case 'approve': return json(role === 'supervisor' ? approve(body) : denied());
       case 'delete': return json(role === 'supervisor' ? remove(body) : denied());
+      case 'unapprove': return json(role === 'supervisor' ? unapprove(body) : denied());
       case 'answer': return json(role === 'responder' ? answer(body) : denied());
     }
     return json({ ok: false, error: 'طلب غير معروف' });
@@ -183,6 +184,20 @@ function approve(body) {
     sh.getRange(row, COL.status).setValue(S.APPROVED);
     sh.getRange(row, COL.approved).setValue(new Date());
     return { ok: true };
+  });
+}
+
+// إلغاء الاعتماد: يرجع السؤال إلى «جديد»، ويستعيد نصه الأصلي إن كان المدير عدّله عند الاعتماد
+function unapprove(body) {
+  return withRow(body.id, S.APPROVED, (sh, row) => {
+    const original = String(sh.getRange(row, COL.original).getValue() || '');
+    if (original) {
+      sh.getRange(row, COL.q).setValue(original);
+      sh.getRange(row, COL.original).setValue('');
+    }
+    sh.getRange(row, COL.status).setValue(S.NEW);
+    sh.getRange(row, COL.approved).setValue('');
+    return { ok: true, q: original || undefined };
   });
 }
 
