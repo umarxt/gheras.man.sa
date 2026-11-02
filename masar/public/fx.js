@@ -140,15 +140,17 @@
       $("#planePill").classList.add("throw");
       $("#paper").classList.add("fly");                                                      // تطير الطائرة
       await W(1250);
-      notify();
+      notify("تم الإرسال، وصل سؤالك دون اسم");
       await W(900);
     }
   });
 
   // إشعار «تم الإرسال» ينزل من أعلى الشاشة ثم يختفي
-  function notify() {
+  // notify(text) يغير نص الإشعار؛ بلا نص يبقى النص المكتوب في الصفحة
+  function notify(text) {
     const n = $("#notif");
     if (!n) return;
+    if (text) $(".notif-t span", n).textContent = text;
     n.classList.remove("show"); void n.offsetWidth; n.classList.add("show");
     clearTimeout(n._h);
     n._h = setTimeout(() => n.classList.remove("show"), 4200);

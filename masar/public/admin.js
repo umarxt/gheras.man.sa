@@ -173,12 +173,12 @@
 
     if (act === "delete") {
       if (!(await confirmDlg({ title: "حذف السؤال؟", text: "لن يظهر هذا السؤال لأحد.", quote: item.q, ok: "حذف", danger: true }))) return;
-      return act1(card, b, "delete", { id }, "حذف السؤال", () => { st.fresh = st.fresh.filter((i) => i !== item); });
+      return act1(card, b, "delete", { id }, "حُذف السؤال، ولن يظهر لأحد", () => { st.fresh = st.fresh.filter((i) => i !== item); });
     }
     if (act === "approve") {
       const ta = $("[data-role=qtext]", card), text = ta.value.trim();
       if (text.length < 3) { ta.classList.add("bad"); ta.focus(); return K.toast("نص السؤال فارغ"); }
-      return act1(card, b, "approve", { id, question: text !== item.q ? text : "" }, "اعتمد السؤال وانتقل إلى مدير الرد", () => {
+      return act1(card, b, "approve", { id, question: text !== item.q ? text : "" }, "اعتُمد السؤال، وانتقل إلى مدير الرد", () => {
         st.fresh = st.fresh.filter((i) => i !== item);
         st.approved.push(Object.assign({}, item, { q: text, approved: new Date().toISOString() }));
       });
@@ -197,7 +197,7 @@
         draft.set(id, "");
         st.approved = st.approved.filter((i) => i !== item);
         counts(); render();
-        K.toast("أرسل الرد وظهر في أسئلة المشاركين");
+        MasarFX.notify("أُرسل الرد، وظهر في أسئلة المشاركين");
       } else {
         await MasarFX.courier.hide();
         handleFail(r);
@@ -213,7 +213,7 @@
       card.classList.add("leaving");
       await K.W(420);
       apply(); counts(); render();
-      K.toast(okMsg);
+      MasarFX.notify(okMsg);
     } else {
       $$("button", card).forEach((x) => (x.disabled = false));
       handleFail(r);
