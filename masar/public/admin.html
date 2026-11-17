@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#FFFFFF">
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="no-referrer">
-  <title>إدارة أسئلة مسار</title>
+  <title>مشرفو أسئلة مسار</title>
   <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
   <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-64.png">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
@@ -21,7 +21,7 @@
   <header class="topbar" id="topbar" hidden>
     <div class="topbar-inner">
       <a href="./" aria-label="صفحة المشاركين"><img class="topbar-logo logo-color" src="assets/logo.png" alt="مسار"><img class="topbar-logo logo-white" src="assets/logo-white.png" alt="" aria-hidden="true"></a>
-      <div class="topbar-title">لوحة الإدارة</div>
+      <div class="topbar-title">لوحة المشرفين</div>
       <div class="topbar-end">
         <span class="topbar-role" id="roleChip"></span>
         <a class="topbar-back" href="./#questions"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg><span class="lg">أسئلة المشاركين</span><span class="sm">الأسئلة</span></a>
@@ -54,9 +54,9 @@
           <img class="logo-color" src="assets/logo.png" alt="مسار"><img class="logo-white" src="assets/logo-white.png" alt="" aria-hidden="true">
         </div>
         <div class="login-card" id="loginCard">
-          <p class="stage-kicker">منصة أسئلة المشاركين</p>
-          <h1 class="stage-title">لوحة الإدارة</h1>
-          <p class="stage-sub" id="gateSub">الدخول برمز الإدارة فقط</p>
+          <p class="stage-kicker">مقدمو الحقيبة</p>
+          <h1 class="stage-title">لوحة المشرفين</h1>
+          <p class="stage-sub" id="gateSub">ادخل برمزك الخاص كمشرف</p>
           <form class="gate-form" id="gateForm" autocomplete="off" novalidate>
             <label class="login-label" for="accessCode">رمز الدخول</label>
             <div class="code-well" id="codeWell">
@@ -94,16 +94,21 @@
       <div class="wrap step">
         <div class="step-hero">
           <div>
-            <p class="eyebrow" id="admEyebrow">لوحة الإدارة</p>
+            <p class="eyebrow" id="admEyebrow">لوحة المشرفين</p>
             <h1 id="admTitle">الأسئلة</h1>
             <p class="lead" id="admLead"></p>
           </div>
           <div class="axis-num" id="admNum" aria-hidden="true"></div>
         </div>
 
-        <div class="tabs" role="tablist" aria-label="أقسام الإدارة">
-          <button class="tab" role="tab" id="tabFresh" aria-selected="true" aria-controls="admHost" data-tab="fresh"><span class="tab-t">الأسئلة الجديدة<small>للمراجعة والاعتماد</small></span><span class="tab-count hot" id="cFresh">٠</span></button>
-          <button class="tab" role="tab" id="tabApproved" aria-selected="false" aria-controls="admHost" data-tab="approved"><span class="tab-t">الأسئلة المعتمدة<small id="approvedSub">بانتظار الرد</small></span><span class="tab-count" id="cApproved">٠</span></button>
+        <div class="tabs" role="tablist" aria-label="أقسام لوحة المشرفين">
+          <button class="tab" role="tab" id="tabFresh" aria-selected="true" aria-controls="admHost" data-tab="fresh"><span class="tab-t">أسئلة جديدة<small>بانتظار الرد</small></span><span class="tab-count hot" id="cFresh">٠</span></button>
+          <button class="tab" role="tab" id="tabDone" aria-selected="false" aria-controls="admHost" data-tab="done"><span class="tab-t">تم الرد<small>العامة والخاصة</small></span><span class="tab-count" id="cDone">٠</span></button>
+        </div>
+        <div class="seg type-filter" id="typeFilter" role="radiogroup" aria-label="نوع السؤال">
+          <label class="checked"><input type="radio" name="tf" value="" checked>الكل</label>
+          <label><input type="radio" name="tf" value="عام">العامة</label>
+          <label><input type="radio" name="tf" value="خاص">الخاصة</label>
         </div>
         <div class="actions" style="margin:0 0 14px">
           <p class="hint" id="syncNote"></p>

@@ -1,4 +1,4 @@
-/* الاتصال بـ Google Apps Script — مشترك بين صفحة المشاركين وصفحة الإدارة
+/* الاتصال بـ Google Apps Script — مشترك بين صفحة المشاركين ولوحة المشرفين
    الطلب لا يحمل أي معرف للمرسل: بلا ملفات تعريف (credentials: "omit") وبلا ترويسات وبلا تتبع. */
 (function () {
   "use strict";
@@ -20,19 +20,23 @@
   }
 
   // ——— وضع المعاينة: يحاكي السكربت في هذا المتصفح فقط ———
-  const KEY = "masar-preview-db";
-  const ROLES = { "1111": "supervisor", "2222": "responder" };
+  const KEY = "masar-preview-db-v2";
+  const SUPS = { "1198": "أ. محمد", "1996": "أ. خالد" };
+  const ABC = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  const normT = (t) => String(t || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const fmtT = (t) => { t = normT(t); return t.slice(0, 4) + "-" + t.slice(4, 8); };
   function db() {
     let d = null;
     try { d = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
     if (!d) {
       const h = 3600e3, now = Date.now(), iso = (ms) => new Date(now - ms).toISOString();
       d = { items: [
-        { id: "p1", q: "متى تبدأ الدورة القادمة في البرنامج؟ وهل يمكن التسجيل لمن فاتته الدورة الأولى؟", status: "منشور", created: iso(9 * h), approved: iso(8 * h), a: "تبدأ الدورة القادمة بداية الشهر القادم بإذن الله، والتسجيل متاح للجميع بمن فيهم من فاتته الدورة الأولى. سيصلكم رابط التسجيل عبر المشرفين.", published: iso(3 * h) },
-        { id: "p2", q: "هل الأنشطة الميدانية إلزامية لكل المشاركين؟", status: "منشور", created: iso(30 * h), approved: iso(28 * h), a: "الأنشطة الميدانية جزء أساسي من البرنامج، ومن عنده عذر يتواصل مع مشرفه لترتيب بديل مناسب.", published: iso(20 * h) },
-        { id: "p3", q: "كيف أعرف مستواي في البرنامج؟", status: "منشور", created: iso(80 * h), approved: iso(75 * h), a: "يرسل لكل مشارك تقرير مختصر بعد كل مرحلة، ويمكنك سؤال مشرفك في أي وقت.", published: iso(70 * h) },
-        { id: "p4", q: "هل يمكن أن نقترح موضوعات للقاءات القادمة؟", status: "معتمد", created: iso(5 * h), approved: iso(2 * h), a: "", published: "" },
-        { id: "p5", q: "أحس أن وقت اللقاء قصير، هل يمكن تمديده نصف ساعة؟", status: "جديد", created: iso(1 * h), approved: "", a: "", published: "" }
+        { id: "p1", q: "متى تبدأ الدورة القادمة في البرنامج؟ وهل يمكن التسجيل لمن فاتته الدورة الأولى؟", type: "عام", status: "منشور", created: iso(9 * h), a: "تبدأ الدورة القادمة بداية الشهر القادم بإذن الله، والتسجيل متاح للجميع بمن فيهم من فاتته الدورة الأولى. سيصلكم رابط التسجيل عبر المشرفين.", by: "أ. محمد", at: iso(3 * h), t: "" },
+        { id: "p2", q: "هل الأنشطة الميدانية إلزامية لكل المشاركين؟", type: "عام", status: "منشور", created: iso(30 * h), a: "الأنشطة الميدانية جزء أساسي من البرنامج، ومن عنده عذر يتواصل مع مشرفه لترتيب بديل مناسب.", by: "أ. خالد", at: iso(20 * h), t: "" },
+        { id: "p3", q: "كيف أعرف مستواي في البرنامج؟", type: "عام", status: "منشور", created: iso(80 * h), a: "يرسل لكل مشارك تقرير مختصر بعد كل مرحلة، ويمكنك سؤال مشرفك في أي وقت.", by: "أ. محمد", at: iso(70 * h), t: "" },
+        { id: "p4", q: "هل يمكن أن نقترح موضوعات للقاءات القادمة؟", type: "عام", status: "جديد", created: iso(5 * h), a: "", by: "", at: "", t: "" },
+        { id: "p5", q: "عندي ظرف عائلي هالأسبوع وما أقدر أحضر اللقاء، وش أسوي؟", type: "خاص", status: "جديد", created: iso(1 * h), a: "", by: "", at: "", t: "" },
+        { id: "p6", q: "أحس أني متأخر عن زملائي في المهام، هل هذا طبيعي؟", type: "خاص", status: "رد خاص", created: iso(26 * h), a: "طبيعي جدا، وكل مشارك يمشي بسرعته. خصص نصف ساعة يوميا للمهام المتأخرة، وإذا احتجت مساعدة اكتب لنا هنا.", by: "أ. خالد", at: iso(22 * h), t: "" }
       ] };
       save(d);
     }
@@ -42,40 +46,52 @@
   async function mock(action, x) {
     await new Promise((r) => setTimeout(r, 450));
     const d = db(), find = (id) => d.items.find((i) => i.id === id);
-    const role = ROLES[String(x.code || "").trim()];
-    const pub = (i) => ({ id: i.id, q: i.q, a: i.a, at: i.published });
-    const adm = (i) => ({ id: i.id, q: i.q, status: i.status, created: i.created, approved: i.approved });
+    const now = () => new Date().toISOString();
     switch (action) {
-      case "ask":
-        d.items.push({ id: Math.random().toString(36).slice(2, 10), q: String(x.question).trim(), status: "جديد", created: new Date().toISOString(), approved: "", a: "", published: "" });
-        save(d); return { ok: true };
+      case "ask": {
+        const type = x.visibility === "خاص" ? "خاص" : x.visibility === "عام" ? "عام" : "";
+        if (!type) return { ok: false, error: "اختر هل سؤالك عام أو خاص" };
+        let t = ""; for (let k = 0; k < 8; k++) t += ABC[Math.floor(Math.random() * ABC.length)];
+        d.items.push({ id: Math.random().toString(36).slice(2, 10), q: String(x.question).trim(), type, status: "جديد", created: now(), a: "", by: "", at: "", t });
+        save(d); return { ok: true, ticket: fmtT(t) };
+      }
       case "published":
-        return { ok: true, items: d.items.filter((i) => i.status === "منشور").sort((a, b) => b.published.localeCompare(a.published)).map(pub) };
+        return { ok: true, items: d.items.filter((i) => i.status === "منشور").sort((a, b) => b.at.localeCompare(a.at)).map((i) => ({ id: i.id, q: i.q, a: i.a, by: i.by, at: i.at })) };
+      case "mine": {
+        const want = new Set((x.tickets || []).map(normT));
+        return { ok: true, items: d.items.filter((i) => i.t && want.has(i.t)).map((i) => {
+          const done = i.status === "منشور" || i.status === "رد خاص";
+          return { ticket: fmtT(i.t), q: i.q, type: i.type, created: i.created,
+            state: i.status === "منشور" ? "public" : i.status === "رد خاص" ? "private" : i.status === "محذوف" ? "closed" : "waiting",
+            a: done ? i.a : "", by: done ? i.by : "", at: done ? i.at : "" };
+        }) };
+      }
     }
-    if (!role) return { ok: false, error: "رمز الدخول غير صحيح" };
+    const name = SUPS[String(x.code || "").trim()];
+    if (!name) return { ok: false, error: "رمز الدخول غير صحيح" };
     switch (action) {
-      case "login": return { ok: true, role };
-      case "list": return { ok: true, role,
-        fresh: role === "supervisor" ? d.items.filter((i) => i.status === "جديد").sort((a, b) => a.created.localeCompare(b.created)).map(adm) : [],
-        approved: d.items.filter((i) => i.status === "معتمد").sort((a, b) => a.approved.localeCompare(b.approved)).map(adm) };
-      case "approve": case "delete": {
-        if (role !== "supervisor") return { ok: false, error: "هذا الإجراء للمدير المعتمد فقط" };
-        const i = find(x.id); if (!i || i.status !== "جديد") return { ok: false, error: "السؤال غير موجود أو تغيرت حالته" };
-        if (action === "approve") { if (x.question && x.question.trim() !== i.q) { i.orig = i.q; i.q = String(x.question).trim(); } i.status = "معتمد"; i.approved = new Date().toISOString(); }
-        else i.status = "محذوف";
+      case "login": return { ok: true, name };
+      case "list": return { ok: true, name,
+        fresh: d.items.filter((i) => i.status === "جديد").sort((a, b) => a.created.localeCompare(b.created)).map((i) => ({ id: i.id, q: i.q, type: i.type, created: i.created, draft: i.a })),
+        done: d.items.filter((i) => i.status === "منشور" || i.status === "رد خاص").sort((a, b) => b.at.localeCompare(a.at))
+          .map((i) => ({ id: i.id, q: i.q, type: i.type, status: i.status === "منشور" ? "public" : "private", a: i.a, by: i.by, at: i.at })) };
+      case "reply": {
+        const i = find(x.id); if (!i || i.status !== "جديد") return { ok: false, error: "تغيرت حالة السؤال، ربما رد عليه مشرف آخر. حدّث الصفحة" };
+        const mode = x.mode === "public" ? "public" : "private";
+        if (mode === "public" && i.type !== "عام") return { ok: false, error: "هذا السؤال خاص، ولا يمكن نشره" };
+        if (mode === "public" && x.question && x.question.trim() !== i.q) { i.orig = i.q; i.q = x.question.trim(); }
+        Object.assign(i, { a: String(x.answer).trim(), by: name, at: now(), status: mode === "public" ? "منشور" : "رد خاص" });
         save(d); return { ok: true };
       }
-      case "unapprove": {
-        if (role !== "supervisor") return { ok: false, error: "هذا الإجراء للمدير المعتمد فقط" };
-        const i = find(x.id); if (!i || i.status !== "معتمد") return { ok: false, error: "السؤال غير موجود أو تغيرت حالته" };
+      case "delete": {
+        const i = find(x.id); if (!i || i.status !== "جديد") return { ok: false, error: "تغيرت حالة السؤال، حدّث الصفحة" };
+        i.status = "محذوف"; save(d); return { ok: true };
+      }
+      case "unpublish": {
+        const i = find(x.id); if (!i || i.status !== "منشور") return { ok: false, error: "تغيرت حالة السؤال، حدّث الصفحة" };
         if (i.orig) { i.q = i.orig; i.orig = ""; }
-        i.status = "جديد"; i.approved = "";
+        Object.assign(i, { status: "جديد", by: "", at: "" });
         save(d); return { ok: true, q: i.q };
-      }
-      case "answer": {
-        const i = find(x.id); if (!i || i.status !== "معتمد") return { ok: false, error: "السؤال غير موجود أو تغيرت حالته" };
-        i.a = String(x.answer).trim(); i.status = "منشور"; i.published = new Date().toISOString();
-        save(d); return { ok: true };
       }
     }
     return { ok: false, error: "طلب غير معروف" };

@@ -69,7 +69,7 @@
               </svg>
             </span>
             <span class="tile-title">اكتب سؤالك</span>
-            <span class="tile-sub">بلا اسم ولا تسجيل، يصل سؤالك إلى الإدارة مباشرة</span>
+            <span class="tile-sub">بلا اسم ولا تسجيل، عاما أو خاصا، يصل مباشرة إلى مشرفي البرنامج</span>
           </a>
           <a class="tile" href="#questions" id="tileList">
             <span class="tile-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></span>
@@ -83,7 +83,7 @@
               </svg>
             </span>
             <span class="tile-title">أسئلة المشاركين</span>
-            <span class="tile-sub">الأسئلة التي تمت الإجابة عنها، الأحدث أولا</span>
+            <span class="tile-sub">الأسئلة العامة المجابة، وأسئلتك وردودها الخاصة</span>
             <span class="tile-count" id="tileCount"></span>
           </a>
         </div>
@@ -98,7 +98,7 @@
           <div>
             <p class="eyebrow">اكتب سؤالك</p>
             <h1>اسأل بحرية</h1>
-            <p class="lead">سؤالك يصل إلى إدارة البرنامج دون أن يعرف أحد من أنت</p>
+            <p class="lead">سؤالك يصل إلى مشرفي البرنامج دون أن يعرف أحد من أنت</p>
           </div>
           <svg class="ic ic-ask hero-art" aria-hidden="true" viewBox="0 0 128 96">
           <g class="bubble"><path class="bub-q" d="M32 8h42a18 18 0 0 1 18 18v18a18 18 0 0 1-18 18H46L30 76V62a18 18 0 0 1-16-18V26A18 18 0 0 1 32 8Z"/>
@@ -115,8 +115,8 @@
             <ul>
               <li>لا نطلب اسمك ولا رقمك ولا بريدك، ولا يوجد تسجيل دخول.</li>
               <li>لا يحفظ مع السؤال أي شيء يدل عليك: لا جهاز ولا عنوان إنترنت ولا ملفات تعريف.</li>
-              <li>الإدارة نفسها ترى نص السؤال فقط، ولا تستطيع معرفة من كتبه.</li>
-              <li>لا ينشر السؤال إلا بعد مراجعته والإجابة عنه.</li>
+              <li>يقرأ سؤالك مشرفو البرنامج (مقدمو الحقيبة) فقط، ولا يستطيعون معرفة من كتبه.</li>
+              <li>السؤال العام لا ينشر إلا بإذن المشرف ومع رده، والسؤال الخاص لا ينشر أبدا.</li>
             </ul>
             <p class="tip">للحفاظ على سريتك: لا تكتب اسمك أو تفاصيل تدل عليك داخل السؤال.</p>
           </div>
@@ -147,10 +147,21 @@
             </div>
             <div class="field-foot"><p class="hint" id="askMsg" role="alert"></p><span class="counter" id="counter"></span></div>
           </div>
+          <fieldset class="vis" id="visBox">
+            <legend class="field-label">من يشوف سؤالك؟<span class="req">*</span></legend>
+            <div class="vis-cards">
+              <label class="vis-card"><input type="radio" name="visibility" value="عام">
+                <span class="vis-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.3 2.8-5 5.5-5s4.9 1.7 5.5 5"/><circle cx="17" cy="9" r="2.6"/><path d="M15.8 14.2c2.4-.3 4.3 1.1 4.8 4.3"/></svg></span>
+                <span class="vis-t"><strong>عام</strong><small>يشوفه المشرفون، وإذا وافق المشرف ينشر مع رده للجميع دون اسمك</small></span></label>
+              <label class="vis-card"><input type="radio" name="visibility" value="خاص">
+                <span class="vis-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/><path d="M12 14.5v2.5"/></svg></span>
+                <span class="vis-t"><strong>خاص</strong><small>يشوفه المشرفون فقط، والرد يوصلك أنت وحدك برمز المتابعة</small></span></label>
+            </div>
+          </fieldset>
           <!-- حقل فخ للبرامج الآلية، لا يراه الإنسان -->
           <div class="hp" aria-hidden="true"><label for="website">اتركه فارغا</label><input id="website" tabindex="-1" autocomplete="off"></div>
           <div class="actions">
-            <p class="hint">يظهر سؤالك في «أسئلة المشاركين» بعد الإجابة عنه</p>
+            <p class="hint">بعد الإرسال تأخذ رمز متابعة تشوف به الرد</p>
             <button class="btn btn-primary btn-lg btn-icon" type="submit" id="sendBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4 9.5 14.5M20 4l-6.5 16-4-5.5L4 10.5 20 4Z"/></svg>إرسال السؤال</button>
           </div>
         </form>
@@ -162,9 +173,9 @@
       <div class="wrap step">
         <div class="step-hero">
           <div>
-            <p class="eyebrow">أسئلة المشاركين</p>
-            <h1>أسئلة وإجابات</h1>
-            <p class="lead" id="listLead">الأسئلة التي أجابت عنها إدارة البرنامج</p>
+            <p class="eyebrow" id="listEyebrow">أسئلة المشاركين</p>
+            <h1 id="listTitle">أسئلة وإجابات</h1>
+            <p class="lead" id="listLead">الأسئلة التي أجاب عنها مشرفو البرنامج</p>
           </div>
           <div class="axis-num" id="totalNum" aria-hidden="true"></div>
         </div>
@@ -172,8 +183,17 @@
         <div class="tabs" role="tablist" aria-label="تصنيف الأسئلة">
           <button class="tab" role="tab" id="tabRecent" aria-selected="true" aria-controls="listHost" data-tab="recent"><span class="tab-t">الأحدث<small>آخر ٢٤ ساعة</small></span><span class="tab-count hot" id="cRecent">٠</span></button>
           <button class="tab" role="tab" id="tabAll" aria-selected="false" aria-controls="listHost" data-tab="all"><span class="tab-t">كل الأسئلة المجابة<small>الأرشيف كاملا</small></span><span class="tab-count" id="cAll">٠</span></button>
+          <button class="tab" role="tab" id="tabMine" aria-selected="false" aria-controls="listHost" data-tab="mine"><span class="tab-t">أسئلتي<small>وردودها الخاصة</small></span><span class="tab-count" id="cMine">٠</span></button>
         </div>
-        <div class="search">
+        <form class="ticket-add" id="ticketForm" hidden novalidate>
+          <label for="ticketInput">عندك رمز متابعة من جهاز آخر؟</label>
+          <div class="ticket-row">
+            <input class="input" id="ticketInput" dir="ltr" placeholder="ABCD-EFGH" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12">
+            <button class="btn btn-primary btn-sm" type="submit">إضافة</button>
+          </div>
+          <p class="hint" id="ticketMsg" role="alert"></p>
+        </form>
+        <div class="search" id="searchBox">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>
           <input class="input" id="search" type="search" placeholder="ابحث في الأسئلة والإجابات" aria-label="بحث">
         </div>
@@ -189,13 +209,20 @@
           <circle cx="60" cy="60" r="54" fill="none" stroke-width="5"/>
           <path d="M38 62 L54 78 L84 46" fill="none" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <p class="stage-kicker">وصل سؤالك</p>
+        <p class="stage-kicker" id="sentKicker">وصل سؤالك</p>
         <h1 class="stage-title">شكرا لك</h1>
-        <p class="stage-sub">ستراجعه الإدارة وتجيب عنه، ثم يظهر مع إجابته في «أسئلة المشاركين». لم يحفظ أي شيء يدل عليك.</p>
-        <p class="ref"></p>
-        <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <p class="stage-sub" id="sentSub">وصل سؤالك إلى مشرفي البرنامج. لم يحفظ أي شيء يدل عليك.</p>
+        <div class="ticket-card" id="ticketCard" hidden>
+          <span class="ticket-label">رمز المتابعة</span>
+          <div class="ticket-row">
+            <bdi class="ticket-code" id="ticketCode" dir="ltr"></bdi>
+            <button class="btn btn-ghost-line btn-sm" id="copyTicket" type="button">نسخ</button>
+          </div>
+          <p class="ticket-note">محفوظ في هذا الجهاز، وتشوف به الرد في «أسئلتي». احفظه إذا تبي تشوف الرد من جهاز آخر، ولا تعطه لأحد.</p>
+        </div>
+        <div class="sent-actions">
+          <button class="btn btn-primary" id="toMineBtn" type="button">أسئلتي</button>
           <button class="btn btn-onstage" id="againBtn" type="button">سؤال آخر</button>
-          <button class="btn btn-onstage" id="toListBtn" type="button">أسئلة المشاركين</button>
         </div>
       </div>
     </section>
