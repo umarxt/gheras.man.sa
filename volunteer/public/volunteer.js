@@ -535,7 +535,11 @@
     const b = e.target.closest("[data-rmq]");
     if (b) { readAnswers(); delete S.files[b.dataset.rmq]; delete S.answers[b.dataset.rmq]; renderStep(); saveDraft(); }
   });
-  $("#startBtn").onclick = () => { if (store.get(DRAFT, null) && !confirm("عندك تسجيل لم يكتمل. تبدأ من جديد وتحذفه؟")) return; store.del(DRAFT); startNew(); };
+  $("#startBtn").onclick = (e) => {
+    const b = e.currentTarget;
+    if (store.get(DRAFT, null) && !b.dataset.sure) { b.dataset.sure = "1"; b.textContent = "ابدأ من جديد (يحذف غير المكتمل)"; K.toast("عندك تسجيل لم يكتمل. اضغط «أكمل تسجيلك» أو ابدأ من جديد"); return; }
+    delete b.dataset.sure; b.textContent = "سجّل متطوعا"; store.del(DRAFT); startNew();
+  };
   $("#resumeBtn").onclick = () => resumeDraft();
   $("#myRegs").addEventListener("click", (e) => { const b = e.target.closest("[data-t]"); if (b) openStatus(b.dataset.t); });
   $("#nextBtn").onclick = next;

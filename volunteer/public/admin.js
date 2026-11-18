@@ -378,7 +378,7 @@
     $("#view").onclick = (e) => { const b = e.target.closest("[data-sup]"); if (b) { viewSupervisors(b.dataset.sup); $("#supForm").scrollIntoView({ behavior: "smooth" }); } };
     $("#sSig").onchange = async (e) => { const f = e.target.files[0]; if (!f) return; sig = await T.transparentPng(f); $("#sSigBox").innerHTML = `<img src="${sig}" alt="التوقيع">`; };
     if ($("#sCancel")) $("#sCancel").onclick = () => viewSupervisors();
-    if ($("#sDel")) $("#sDel").onclick = async () => { if (!confirm("حذف المشرف؟ الوثائق المعتمدة سابقا ما تتأثر.")) return; try { await call("removeSupervisor", { id: s.id }); await reload(); viewSupervisors(); K.toast("حُذف المشرف"); } catch (x) { K.toast(x.message); } };
+    if ($("#sDel")) $("#sDel").onclick = async (ev) => { const db = ev.currentTarget; if (!db.dataset.sure) { db.dataset.sure = "1"; db.textContent = "اضغط مرة ثانية للتأكيد"; return; } try { await call("removeSupervisor", { id: s.id }); await reload(); viewSupervisors(); K.toast("حُذف المشرف"); } catch (x) { K.toast(x.message); } };
     $("#sSave").onclick = async (e) => {
       const name = $("#sName").value.trim(), title = $("#sTitle").value.trim(), code = $("#sCode").value.trim();
       if (!name || !title) { K.toast("اكتب الاسم والصفة"); return; }
