@@ -16,7 +16,7 @@ cd lost-phone && python3 -m http.server 8765
 افتح `http://localhost:8765` (أو `/#unlock` لتخطي شاشة القفل).
 
 ## النشر
-انشر مجلد `lost-phone` كما هو على Netlify (Publish directory = `lost-phone`) أو أي استضافة ثابتة.
+انشر مجلد `lost-phone` كما هو على Netlify (Base directory = `lost-phone`) أو أي استضافة ثابتة.
 
 ## تعديل المحتوى
 - بيانات التواصل في `content.json` ← `config` (الهاتف، الموقع، البريد، X).
