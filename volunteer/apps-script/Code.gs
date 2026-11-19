@@ -110,11 +110,12 @@ function setup() {
       desc: 'انضم إلى فريق متطوعي غراس، ونرشحك للفرص المناسبة لاهتماماتك ووقتك.', location: 'الرياض', gender: 'الكل',
       employerSig: YES, extras: '[]', questions: JSON.stringify(GENERAL_QUESTIONS), updated: now() });
   }
-  const tpl = defaultTemplate();
+  let tpl = '';
+  try { tpl = defaultTemplate(); } catch (e) { Logger.log('تعذر إنشاء القالب الافتراضي: ' + e); }
   const sheet = SpreadsheetApp.getActive().getSheetByName('Sheet1') || SpreadsheetApp.getActive().getSheetByName('ورقة1');
   if (sheet && SpreadsheetApp.getActive().getSheets().length > 1 && sheet.getLastRow() === 0) SpreadsheetApp.getActive().deleteSheet(sheet);
   Logger.log('تم التركيب. المجلد الرئيسي: ' + rootFolder().getUrl());
-  Logger.log('القالب الافتراضي: ' + DriveApp.getFileById(tpl).getUrl());
+  if (tpl) Logger.log('القالب الافتراضي: ' + DriveApp.getFileById(tpl).getUrl());
   Logger.log('رمز دخول اللوحة المبدئي: ' + CONFIG.ADMIN_CODE + ' (غيّره من الإعدادات بعد الدخول)');
 }
 
@@ -714,8 +715,12 @@ function defaultTemplate() {
     p.editAsText().setFontFamily('Arial').setFontSize(opt.size || 12).setForegroundColor(opt.color || '#14213A').setBold(!!opt.bold);
     return p;
   };
-  b.getParagraphs()[0].setText(CONFIG.ORG_NAME).setLeftToRight(false).setAlignment(DocumentApp.HorizontalAlignment.RIGHT)
-    .editAsText().setFontFamily('Arial').setFontSize(11).setForegroundColor('#27B5C1');
+  // ملاحظة: setText في Paragraph لا ترجع الفقرة، فكل خطوة في سطر مستقل
+  const first = b.getParagraphs()[0];
+  first.setText(CONFIG.ORG_NAME);
+  first.setLeftToRight(false);
+  first.setAlignment(DocumentApp.HorizontalAlignment.RIGHT);
+  first.editAsText().setFontFamily('Arial').setFontSize(11).setForegroundColor('#27B5C1');
   para('ميثاق التطوع — {البرنامج}', { size: 20, color: '#1C437D', after: 14 });
   para('أنا المتطوع/ـة: {الاسم}، الجنسية: {الجنسية}، رقم الهوية أو الإقامة: {رقم_الهوية}، الجوال: {الجوال}، البريد: {البريد}.');
   para('أرغب في التطوع لدى ' + CONFIG.ORG_NAME + ' في {البرنامج}، وأقر بأني قرأت هذا الميثاق، وألتزم بما يلي:', { after: 10 });
