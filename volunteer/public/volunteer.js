@@ -541,8 +541,17 @@
   }
 
   // ===================== البداية =====================
+  // البرامج تُطلب مرة واحدة عند فتح الصفحة (في الخلفية)، فلا ينتظر المتطوع عند الضغط على «سجّل»
+  let configP = null, configAt = 0;
+  function fetchConfig(force) {
+    if (!configP || force || Date.now() - configAt > 120000) {
+      configAt = Date.now();
+      configP = T.call("config").catch((e) => { configP = null; throw e; });
+    }
+    return configP;
+  }
   async function loadPrograms() {
-    const r = await T.call("config");
+    const r = await fetchConfig();
     programs = r.programs || [];
   }
   async function startNew(person) {
@@ -638,6 +647,7 @@
   });
 
   // أول فتح: رابط المتابعة ← مسودة ← تسجيل ينتظر إجراء ← الرئيسية
+  fetchConfig().catch(() => {});
   const hashT = (location.hash.match(/[#&]t=([A-Za-z0-9]+)/) || [])[1];
   if (hashT) { history.replaceState(null, "", location.pathname); openStatus(hashT); }
   else if (!resumeDraft()) {

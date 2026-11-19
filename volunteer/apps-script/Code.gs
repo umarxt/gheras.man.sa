@@ -150,12 +150,39 @@ const ADMIN_ACTIONS = ['adminLogin', 'adminLoad', 'regDetail', 'adminFile', 'che
   'reject', 'saveProgram', 'previewTemplate', 'saveSupervisor', 'removeSupervisor', 'saveSettings', 'adminVolunteers', 'importVolunteers'];
 
 // ===================== واجهة المتطوع =====================
+// قائمة البرامج المفتوحة: تُحفظ في الذاكرة المؤقتة دقيقتين لأن كل زائر يطلبها
 function apiConfig() {
+  const cached = bigCacheGet('config');
+  if (cached) return cached;
   const regs = table('regs').all();
   const list = allPrograms().filter(function (p) { return p.state === 'مفتوح'; })
     .sort(function (a, b) { return a.order - b.order; })
     .map(function (p) { const o = publicProgram(p, regs); if (!o.charterText) o.charterText = defaultText(); return o; });
-  return { programs: list };
+  const out = { programs: list };
+  bigCachePut('config', out, 120);
+  return out;
+}
+function clearConfigCache() { try { CacheService.getScriptCache().remove('config_n'); } catch (e) {} }
+// ذاكرة مؤقتة لقيم أكبر من ١٠٠ ك.ب: تقسم على عدة مفاتيح
+function bigCachePut(key, obj, ttl) {
+  try {
+    const s = JSON.stringify(obj), size = 90000, parts = {};
+    const n = Math.ceil(s.length / size);
+    if (n > 20) return;
+    for (let i = 0; i < n; i++) parts[key + '_' + i] = s.slice(i * size, (i + 1) * size);
+    parts[key + '_n'] = String(n);
+    CacheService.getScriptCache().putAll(parts, ttl);
+  } catch (e) { console.error(e); }
+}
+function bigCacheGet(key) {
+  try {
+    const c = CacheService.getScriptCache(), n = Number(c.get(key + '_n') || 0);
+    if (!n) return null;
+    const keys = []; for (let i = 0; i < n; i++) keys.push(key + '_' + i);
+    const got = c.getAll(keys); let s = '';
+    for (let i = 0; i < n; i++) { if (got[keys[i]] == null) return null; s += got[keys[i]]; }
+    return JSON.parse(s);
+  } catch (e) { return null; }
 }
 
 // التعرف على متطوع مسجل: يرسل رمزا من ٤ أرقام إلى بريده المسجل (أو يتحقق بجواله إن لم يكن له بريد)
@@ -246,7 +273,11 @@ function apiSubmit(p) {
   reg.signatureId = sigFile.getId();
   reg.files = JSON.stringify(saveQuestionFiles(prog, reg, p.files, {}));
   table('regs').put(reg);
-  try { ensureDraft(reg, prog); } catch (err) { console.error(err); notifyAdminError('تعذر توليد الميثاق للتسجيل ' + reg.regId, err); }
+  // الميثاق بتوقيع المتطوع يُولد الآن فقط إذا احتاج صاحب العمل (يُرفق في الإيميل)، وإلا يُولد عند فتحه أو اعتماده
+  if (reg.status === STATUS.EMPLOYER) {
+    try { ensureDraft(reg, prog); } catch (err) { console.error(err); notifyAdminError('تعذر توليد الميثاق للتسجيل ' + reg.regId, err); }
+  }
+  clearConfigCache();
   upsertVolunteer(JSON.parse(reg.person), verifiedFor(p.vtoken, person.nationalId));
   writeProgramSheet(reg, prog);
   mailVolunteerReceived(reg, prog);
@@ -318,7 +349,7 @@ function apiResubmit(p) {
   r.note = ''; r.updated = now();
   if (r.draftId) { trash(r.draftId); r.draftId = ''; }
   table('regs').put(r);
-  try { ensureDraft(r, prog); } catch (err) { console.error(err); }
+  if (r.status === STATUS.EMPLOYER) { try { ensureDraft(r, prog); } catch (err) { console.error(err); } }
   upsertVolunteer(person, true);
   writeProgramSheet(r, prog);
   mailAdmin('أعاد الإرسال بعد التعديل: ' + r.name + ' — ' + r.programName, 'أعاد المتطوع الإرسال', regSummaryHtml(r));
@@ -427,6 +458,7 @@ function apiReject(p) {
   const reason = String(p.reason || '').trim(); if (!reason) fail('اكتب السبب');
   r.status = STATUS.REJECTED; r.reason = reason.slice(0, 2000); r.updated = now();
   table('regs').put(r);
+  clearConfigCache();
   writeProgramSheet(r, getProgram(r.programId));
   mail(r.email, 'بخصوص تسجيلك في ' + r.programName, 'شكرا لاهتمامك',
     '<p>أهلا ' + h(firstName(r.name)) + '،</p><p>نشكرك على رغبتك في التطوع معنا في <strong>' + h(r.programName) + '</strong>. نعتذر عن عدم قبول التسجيل هذه المرة، للسبب التالي:</p>' +
@@ -468,6 +500,7 @@ function apiSaveProgram(p) {
     try { o.charterText = templateText(o.templateId); } catch (err) { fail('تعذر قراءة القالب: تأكد أن الملف موجود ولديك صلاحية عليه'); }
   } else o.charterText = '';
   if (row) t.put(o); else t.add(o);
+  clearConfigCache();
   return { id: o.id };
 }
 
