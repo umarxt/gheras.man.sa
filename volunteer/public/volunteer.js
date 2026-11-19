@@ -27,7 +27,7 @@
   let programs = [];
   let S = blank();
   let pad = null;
-  function blank() { return { step: 0, mode: "new", token: null, person: {}, kind: "", programId: "", answers: {}, files: {}, agreed: false, employerFile: null, note: "" }; }
+  function blank() { return { vtoken: "", step: 0, mode: "new", token: null, person: {}, kind: "", programId: "", answers: {}, files: {}, agreed: false, employerFile: null, note: "" }; }
   const program = () => programs.find((p) => p.id === S.programId) || null;
   const general = () => programs.find((p) => p.kind === "general") || null;
   const needsEmployer = () => { const p = program(); return !!(p && p.employerSig && S.person.nationality && !T.isSaudi(S.person)); };
@@ -98,7 +98,8 @@
     const p = S.person;
     return hero(n, t, eb, "بياناتك الشخصية", "تعبّيها مرة وحدة، وتنحفظ في جهازك حتى ترسل") + editNote() +
       `<div class="card"><h2 class="card-title">الهوية والتواصل</h2><div class="grid grid-2">
-        ${field("nationalId", "رقم الهوية أو الإقامة", input("nationalId", p.nationalId, 'inputmode="numeric" dir="ltr" maxlength="10" autocomplete="off"'), true, "١٠ أرقام")}
+        ${field("nationalId", "رقم الهوية أو الإقامة", input("nationalId", p.nationalId, 'inputmode="numeric" dir="ltr" maxlength="10" autocomplete="off"'), true, S.vtoken ? "تم التحقق، وبياناتك معبأة من سجلنا" : "١٠ أرقام. إذا سجلت عندنا قبل، نرجّع لك بياناتك")}
+        <div class="verify" id="verifyBox" hidden></div>
         ${field("phone", "رقم الجوال", input("phone", p.phone, 'inputmode="tel" dir="ltr" maxlength="10" placeholder="05xxxxxxxx" autocomplete="tel"'), true)}
         ${field("email", "البريد الإلكتروني", input("email", p.email, 'type="email" dir="ltr" autocomplete="email" placeholder="name@example.com"'), true, "توصلك عليه الوثيقة ورابط المتابعة")}
       </div></div>
@@ -112,7 +113,7 @@
           ${field("nationalityName", "اكتب جنسيتك", input("nationalityName", p.nationalityName, 'placeholder="مثال: مصري"'), true)}
         </div></div></div>
         <div class="grid grid-3">
-          ${field("birthDate", "تاريخ الميلاد", input("birthDate", p.birthDate, 'type="date" max="' + new Date().toISOString().slice(0, 10) + '"'), true)}
+          ${field("birthDate", "تاريخ الميلاد", input("birthDate", p.birthDate, 'type="date" max="' + new Date().toISOString().slice(0, 10) + '"'), true, '<span class="age-hint" id="ageHint">' + ageHint(p.birthDate) + "</span>")}
           ${field("city", "المدينة", input("city", p.city || "الرياض"), true)}
           ${field("district", "الحي", input("district", p.district))}
         </div>
@@ -126,19 +127,76 @@
         </div>
       </div></div>`;
   }
-  let lookedUp = "";
-  async function tryLookup() {
-    const id = $("#nationalId").value, ph = $("#phone").value;
-    if (S.mode === "edit" || id.length !== 10 || ph.length !== 10 || lookedUp === id + ph) return;
-    lookedUp = id + ph;
+  // ——— التعرف على المتطوع المسجل: رقم الهوية ثم رمز على البريد (أو الجوال إذا ما له بريد) ———
+  let lookedUp = "", resendAt = 0;
+  async function startLookup(force) {
+    const id = $("#nationalId").value;
+    if (S.mode === "edit" || !/^[12]\d{9}$/.test(id) || (!force && lookedUp === id) || (S.vtoken && S.person.nationalId === id)) return;
+    lookedUp = id;
+    const box = $("#verifyBox");
     try {
-      const r = await T.call("lookup", { nationalId: id, phone: ph });
-      if (r.person && !S.person.name) {
-        S.person = Object.assign({}, r.person, S.person, { nationalId: id, phone: ph });
-        Object.keys(r.person).forEach((k) => { if (!S.person[k]) S.person[k] = r.person[k]; });
-        renderStep(); K.toast("رجّعنا لك بياناتك من تسجيلك السابق");
-      }
-    } catch (e) {}
+      const r = await T.call("lookupStart", { nationalId: id });
+      if (!r.found || $("#nationalId").value !== id) { box.hidden = true; return; }
+      resendAt = Date.now() + 60000;
+      box.dataset.method = r.method;
+      box.innerHTML = r.method === "email"
+        ? `<div class="verify-t"><strong>عندك بيانات مسجلة عندنا</strong><span>أرسلنا رمز تحقق من ٤ أرقام إلى <bdi dir="ltr">${esc(r.hint)}</bdi>${r.demo ? ` <em class="mode-pill">وضع التجربة: ${esc(r.demo)}</em>` : ""}</span></div>
+           <div class="verify-row"><input class="input" id="vCode" inputmode="numeric" dir="ltr" maxlength="4" placeholder="••••" aria-label="رمز التحقق" autocomplete="one-time-code"><button class="btn btn-primary btn-sm" type="button" id="vGo">تحقق</button><button class="link-btn" type="button" id="vResend">إعادة الإرسال</button><button class="link-btn" type="button" id="vSkip">لا، أكمل بدونها</button></div>`
+        : `<div class="verify-t"><strong>عندك بيانات مسجلة عندنا</strong><span>اكتب جوالك المسجل (<bdi dir="ltr">${esc(r.hint)}</bdi>) لنعرض بياناتك</span></div>
+           <div class="verify-row"><input class="input" id="vPhone" inputmode="tel" dir="ltr" maxlength="10" placeholder="05xxxxxxxx" aria-label="الجوال المسجل"><button class="btn btn-primary btn-sm" type="button" id="vGo">تحقق</button><button class="link-btn" type="button" id="vSkip">لا، أكمل بدونها</button></div>`;
+      box.innerHTML += '<p class="hint err" id="vErr" hidden></p>';
+      box.hidden = false;
+      const inp = $("#vCode") || $("#vPhone");
+      inp.addEventListener("input", () => { inp.value = T.toEn(inp.value).replace(/\D/g, ""); if (inp.id === "vCode" && inp.value.length === 4) verifyLookup(); });
+      inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); verifyLookup(); } });
+      $("#vGo").onclick = verifyLookup;
+      $("#vSkip").onclick = () => { box.hidden = true; };
+      if ($("#vResend")) $("#vResend").onclick = () => { if (Date.now() < resendAt) { K.toast("انتظر دقيقة قبل إعادة الإرسال"); return; } startLookup(true); K.toast("أرسلنا رمزا جديدا"); };
+      setTimeout(() => inp.focus(), 50);
+    } catch (e) { box.hidden = true; }
+  }
+  async function verifyLookup() {
+    const id = $("#nationalId").value, c = $("#vCode"), ph = $("#vPhone"), er = $("#vErr");
+    const val = (c || ph).value;
+    if ((c && val.length !== 4) || (ph && val.length !== 10)) return;
+    $("#vGo").disabled = true;
+    try {
+      const r = await T.call("lookupVerify", c ? { nationalId: id, code: val } : { nationalId: id, phone: val });
+      const keep = { email: S.person.email };
+      S.person = Object.assign({}, r.person, { nationalId: id });
+      if (!S.person.email && keep.email) S.person.email = keep.email;
+      S.vtoken = r.vtoken;
+      saveDraft(); renderStep();
+      topToast(`أهلا ${esc(String(r.person.name || "").split(" ")[0])}، رجّعنا لك بياناتك`, "عدّل أي شيء تغيّر، ونحدّثه في سجلك");
+    } catch (e) { er.hidden = false; er.style.color = "var(--danger)"; er.textContent = e.message; $("#vGo").disabled = false; }
+  }
+
+  // ——— العمر ———
+  function ageHint(v) {
+    const a = T.ageParts(v);
+    return a && a.y >= 1 ? `عمرك ${T.arCount(a.y, T.W_AM)}` : "";
+  }
+  let ageT, ageShown = "";
+  function updateAge(announce) {
+    const v = ($("#birthDate") || {}).value || "";
+    const h = $("#ageHint"); if (h) h.textContent = ageHint(v);
+    clearTimeout(ageT);
+    if (!announce) return;
+    ageT = setTimeout(() => {
+      const a = T.ageParts(v);
+      if (!a || a.y < 3 || a.y > 100 || ageShown === v) return;
+      ageShown = v;
+      if (!a.m && !a.d) topToast("كل عام وأنت بخير 🎂", `عمرك اليوم ${T.arCount(a.y, T.W_YEAR)} بالتمام`);
+      else topToast("ما شاء الله تبارك الله", `عمرك اليوم ${T.ageSentence(a)}`);
+    }, 650);
+  }
+
+  // ——— إشعار علوي لطيف ———
+  function topToast(title, sub, ms) {
+    const t = $("#toastTop"); if (!t) return;
+    t.innerHTML = `<span class="tt-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 21c-4.5-3.2-8-6.4-8-10.2A4.6 4.6 0 0 1 12 8a4.6 4.6 0 0 1 8 2.8C20 14.6 16.5 17.8 12 21Z"/></svg></span><span class="tt-tx"><strong>${title}</strong>${sub ? `<span>${sub}</span>` : ""}</span>`;
+    t.classList.remove("show"); void t.offsetWidth; t.classList.add("show");
+    clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), ms || 5200);
   }
   function readPerson() {
     const g = (id) => { const el = $("#" + id); return el ? el.value.trim() : ""; };
@@ -243,11 +301,17 @@
     (p.extras || []).forEach((x) => add(x.k, x.v, (x.v || "").length > 40));
     return `<div class="card">${p.image ? `<img class="prog-hero-img" src="${esc(p.image)}" alt="">` : ""}<h2 class="card-title">${esc(p.name)}</h2>${p.desc ? `<p style="margin:-8px 0 18px;color:var(--ink-2)">${esc(p.desc)}</p>` : ""}${d.length ? `<dl class="detail-grid" style="margin:0">${d.join("")}</dl>` : ""}</div>`;
   }
+  function hoursBanner(p) {
+    const n = Number(p.hours);
+    return `<div class="hours-banner"><svg class="hg" viewBox="0 0 40 56" aria-hidden="true"><path class="hg-frame" d="M6 3h28M6 53h28M9 3c0 13 9 16 9 25S9 40 9 53M31 3c0 13-9 16-9 25s9 12 9 25"/><path class="hg-top" d="M12 12h16c-1 6-6 9-8 12-2-3-7-6-8-12Z"/><path class="hg-bot" d="M11 50c1-6 5-9 9-11 4 2 8 5 9 11Z"/><path class="hg-sand" d="M20 25v16"/></svg>
+      <div><p class="hb-k">بنهاية هذه الفرصة تحصل على</p><p class="hb-n"><b>${toAr(n)}</b> ${n === 1 ? "ساعة" : n === 2 ? "ساعتين" : n <= 10 ? "ساعات" : "ساعة"} تطوعية</p><p class="hb-s">${p.days && p.days.length ? esc(p.days.join("، ")) + (p.timeFrom ? " — " + esc(T.programTime(p)) : "") : "تُضاف لرصيدك بعد إتمام البرنامج"}</p></div></div>`;
+  }
   function stepDetails(eb, n, t) {
     const p = program();
     if (!p) return '<p class="empty">البرنامج غير متاح</p>';
     const qs = p.questions || [];
     return hero(n, t, eb, p.kind === "general" ? "التطوع العام" : "تفاصيل البرنامج", p.kind === "general" ? "عرّفنا على اهتماماتك ووقتك" : "اطّلع على تفاصيل البرنامج، وجاوب على أسئلته") + editNote() +
+      (p.kind !== "general" && Number(p.hours) ? hoursBanner(p) : "") +
       (p.kind === "general" ? "" : detailsCard(p)) +
       (qs.length ? `<div class="card"><h2 class="card-title">${p.kind === "general" ? "اهتماماتك ووقتك" : "أسئلة البرنامج"}</h2><div class="grid">${qs.map(qField).join("")}</div></div>` : "");
   }
@@ -363,7 +427,7 @@
     K.courier.creep(5, 88);
     try {
       let r;
-      const base = { person: S.person, answers: S.answers, files: S.files, signature: sig, siteUrl: location.origin + location.pathname };
+      const base = { person: S.person, answers: S.answers, files: S.files, signature: sig, vtoken: S.vtoken || "", siteUrl: location.origin + location.pathname };
       if (S.mode === "edit") {
         r = await T.call("resubmit", Object.assign(base, { token: S.token, employerFile: S.employerFile }));
         r.token = S.token; r.regId = S.regId;
@@ -515,13 +579,20 @@
   stepHost.addEventListener("input", (e) => {
     const key = steps()[S.step], t = e.target;
     if (key === "person") {
-      if (t.id === "nationalId" || t.id === "phone") { t.value = T.toEn(t.value).replace(/\D/g, "").slice(0, 10); tryLookup(); }
+      if (t.id === "nationalId" || t.id === "phone") t.value = T.toEn(t.value).replace(/\D/g, "").slice(0, 10);
+      if (t.id === "nationalId") { if (S.vtoken && t.value !== S.person.nationalId) S.vtoken = ""; if (t.value.length === 10) startLookup(); else $("#verifyBox").hidden = true; }
+      if (t.id === "birthDate") updateAge(false);
       readPerson(); saveDraft();
     } else if (key === "details") { readAnswers(); saveDraft(); }
   });
   stepHost.addEventListener("change", async (e) => {
     const key = steps()[S.step], f = e.target;
-    if (key === "person") { readPerson(); saveDraft(); return; }
+    if (key === "person") { if (f.id === "birthDate") updateAge(true); readPerson(); saveDraft(); return; }
+    if (key === "path" && f.name === "programId") {
+      const pr = programs.find((x) => x.id === f.value);
+      if (pr && pr.hours) topToast(`${T.arCount(Number(pr.hours), T.W_HOUR)} تطوعية في رصيدك`, `بنهاية «${esc(pr.name)}» تحصل عليها، شكرا لعطائك`, 4200);
+      return;
+    }
     if (key !== "details") return;
     if (f.type === "file" && f.dataset.q) {
       const file = f.files[0]; if (!file) return;
@@ -541,6 +612,7 @@
     delete b.dataset.sure; b.textContent = "سجّل متطوعا"; store.del(DRAFT); startNew();
   };
   $("#resumeBtn").onclick = () => resumeDraft();
+  $("#teamsBtn").onclick = () => topToast("بوابة الفرق قيد البناء", "نجهّزها لكم الحين، وقريبا تفتح أبوابها", 4200);
   $("#myRegs").addEventListener("click", (e) => { const b = e.target.closest("[data-t]"); if (b) openStatus(b.dataset.t); });
   $("#nextBtn").onclick = next;
   $("#prevBtn").onclick = prev;

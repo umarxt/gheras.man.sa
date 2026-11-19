@@ -17,7 +17,7 @@
   };
   const tree = '<svg class="ss ss-large" viewBox="0 0 80 60"><path class="ground" d="M14 54h52"/><path class="trunk" d="M40 54V30M40 41l-7-6M40 37l6-5"/><g class="sway" style="transform-origin:40px 40px"><circle class="c-lime" cx="27" cy="26" r="11"/><circle class="c-teal" cx="53" cy="25" r="11"/><circle class="c-green" cx="40" cy="17" r="14"/></g></svg>';
   const sapling = '<svg class="ss ss-small" viewBox="0 0 80 60"><path class="ground" d="M22 52h36"/><g class="sway" style="transform-origin:40px 52px"><path class="trunk" d="M40 52V33"/><path class="leaf leaf-l" d="M40 38c-3-8-10-11-17-10 1 7 7 12 17 10Z"/><path class="leaf leaf-r" d="M40 33c2-9 9-13 17-12-1 8-7 13-17 12Z"/></g></svg>';
-  const TABS = [["regs", "العقود"], ["programs", "البرامج"], ["supervisors", "المشرفون"], ["settings", "الإعدادات"]];
+  const TABS = [["regs", "العقود"], ["volunteers", "المتطوعون"], ["programs", "البرامج"], ["supervisors", "المشرفون"], ["settings", "الإعدادات"]];
   const QTYPES = [["text", "نص قصير"], ["long", "نص طويل"], ["number", "رقم"], ["choice", "اختيار واحد"], ["multi", "اختيار متعدد"], ["yesno", "نعم أو لا"], ["date", "تاريخ"], ["file", "رفع ملف"]];
   const call = (a, d) => T.call(a, Object.assign({ admin: CODE }, d || {}));
   const hero = (eb, h, lead, num) => `<div class="step-hero"><div><p class="eyebrow">${eb}</p><h1>${h}</h1><p class="lead">${lead}</p><nav class="tabs admin-tabs-m" role="tablist" aria-label="أقسام اللوحة">${tabsHtml()}</nav></div>${num != null ? `<div class="axis-num" aria-hidden="true">${toAr(num)}</div>` : ""}</div><div class="band" aria-hidden="true"></div>`;
@@ -44,7 +44,7 @@
   function logout() { try { sessionStorage.removeItem(SK); } catch (e) {} location.reload(); }
   function go(t) {
     tab = t; $("#tabs").innerHTML = tabsHtml(); $("#dock").hidden = true;
-    ({ regs: viewRegs, programs: viewPrograms, supervisors: viewSupervisors, settings: viewSettings })[t]();
+    ({ regs: viewRegs, volunteers: viewVolunteers, programs: viewPrograms, supervisors: viewSupervisors, settings: viewSettings })[t]();
     window.scrollTo(0, 0);
   }
   document.addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b) go(b.dataset.tab); });
@@ -361,6 +361,141 @@
       editProgram(r.id);
     } catch (e) { K.toast(e.message, 4200); }
     finally { b.disabled = false; b.textContent = "حفظ"; }
+  }
+
+  // ===================== المتطوعون =====================
+  let V = null, vq = "";
+  const PLATFORM = (window.TG_CONFIG && TG_CONFIG.PLATFORM_COLUMNS) || [
+    ["رقم الهوية", "nationalId"], ["الاسم", "name"], ["الجنس", "gender"], ["الجنسية", "nationality"], ["تاريخ الميلاد", "birthDate"],
+    ["رقم الجوال", "phone"], ["البريد الإلكتروني", "email"], ["المدينة", "city"], ["المؤهل العلمي", "qualification"],
+    ["اسم الفرصة", "program"], ["عدد الساعات", "hours"], ["تاريخ البداية", "startDate"], ["تاريخ النهاية", "endDate"]
+  ];
+  async function viewVolunteers() {
+    $("#view").innerHTML = `<div class="wrap step">${hero("لوحة الإدارة", "المتطوعون", "سجل المتطوعين، ورفعه وتصديره بملف Excel")}<p class="empty">جار التحميل…</p></div>`;
+    try { V = await call("adminVolunteers"); } catch (e) { K.toast(e.message); return; }
+    if (tab !== "volunteers") return;
+    const vols = V.volunteers || [];
+    const approved = (V.regs || []).filter((r) => r.status === S_.APPROVED);
+    const progs = [...new Set(approved.map((r) => r.programName))];
+    $("#view").innerHTML = `<div class="wrap step">${hero("لوحة الإدارة", "المتطوعون", "سجل المتطوعين، ورفعه وتصديره بملف Excel", vols.length)}
+      <div class="xl-grid">
+        <div class="card xl-card"><h2 class="card-title">رفع بيانات المتطوعين</h2>
+          <ol class="xl-steps"><li>نزّل النموذج وعبّه، كل متطوع في صف.</li><li>ارفعه هنا، ونوريك ملخصا قبل الحفظ.</li><li>إذا كتب المتطوع هويته في التسجيل، يوصله رمز على بريده وتطلع بياناته كاملة.</li></ol>
+          <div class="row-actions"><button class="btn btn-line btn-icon" type="button" id="xlTpl">${ic.down}تنزيل النموذج</button><label class="btn btn-primary btn-icon">${ic.plus}رفع ملف Excel<input type="file" id="xlIn" hidden accept=".xlsx,.xls,.csv"></label></div></div>
+        <div class="card xl-card"><h2 class="card-title">التصدير</h2>
+          <p class="hint" style="margin:-8px 0 14px">ملف Excel لكل المتطوعين، أو ملف بقالب منصة التطوع للتسجيلات المعتمدة.</p>
+          <div class="grid"><button class="btn btn-line btn-icon" type="button" id="xlAll">${ic.down}تصدير كل المتطوعين</button>
+          <div class="xl-row"><select class="select" id="xlProg" aria-label="البرنامج"><option value="">كل البرامج المعتمدة (${toAr(approved.length)})</option>${progs.map((p) => `<option>${esc(p)}</option>`).join("")}</select><button class="btn btn-ok btn-icon" type="button" id="xlPlat">${ic.down}تصدير لمنصة التطوع</button></div></div></div>
+      </div>
+      <div class="filters" style="grid-template-columns:1fr"><input class="input" id="vq" type="search" placeholder="ابحث بالاسم أو رقم الهوية أو الجوال" value="${esc(vq)}" aria-label="بحث"></div>
+      <div class="reg-list" id="volList"></div></div>`;
+    drawVols();
+    $("#vq").addEventListener("input", (e) => { vq = e.target.value; drawVols(); });
+    $("#xlTpl").onclick = downloadTemplate;
+    $("#xlAll").onclick = exportAll;
+    $("#xlPlat").onclick = exportPlatform;
+    $("#xlIn").onchange = (e) => { const f = e.target.files[0]; e.target.value = ""; if (f) importFile(f); };
+  }
+  function volStats(id) {
+    const rs = (V.regs || []).filter((r) => r.nationalId === id);
+    const ap = rs.filter((r) => r.status === S_.APPROVED);
+    return { count: rs.length, programs: rs.map((r) => r.programName), hours: ap.reduce((a, r) => a + (Number(r.hours) || 0), 0) };
+  }
+  function drawVols() {
+    const q = T.toEn(vq.trim()).toLowerCase();
+    const list = (V.volunteers || []).filter((v) => !q || [v.name, v.nationalId, v.phone].some((x) => String(x || "").toLowerCase().includes(q)));
+    $("#volList").innerHTML = list.length ? list.slice(0, 300).map((v) => { const st = volStats(v.nationalId); return `<div class="reg-row" style="cursor:default">
+        <span><span class="nm">${esc(v.name)}</span><small><bdi dir="ltr">${esc(v.nationalId)}</bdi> — ${esc(T.nationalityText(v))}</small></span>
+        <span class="pg"><bdi dir="ltr">${esc(v.phone || "—")}</bdi><small>${esc(v.email || "بلا بريد")}</small></span>
+        <span class="dt"><small>${st.count ? `${toAr(st.count)} تسجيل${st.hours ? " — " + toAr(st.hours) + " ساعة معتمدة" : ""}` : "لم يسجل بعد"}</small></span>
+        <span class="chip">${v.source === "ملف" ? "من الملف" : "سجّل بنفسه"}</span></div>`; }).join("") + (list.length > 300 ? `<p class="empty">يظهر أول ٣٠٠، استخدم البحث</p>` : "")
+      : `<p class="empty">${(V.volunteers || []).length ? "لا نتائج مطابقة" : "لا يوجد متطوعون بعد. ارفع ملف Excel أو انتظر أول تسجيل"}</p>`;
+  }
+  function saveBook(XLSX, sheets, name) {
+    const wb = XLSX.utils.book_new();
+    wb.Workbook = { Views: [{ RTL: true }] };
+    sheets.forEach(([title, aoa, widths]) => {
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      ws["!cols"] = (widths || aoa[0].map(() => 18)).map((w) => ({ wch: w }));
+      XLSX.utils.book_append_sheet(wb, ws, title);
+    });
+    const out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const u = URL.createObjectURL(blob), a = document.createElement("a");
+    a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(u), 5000);
+    K.toast("نزل الملف: " + name);
+  }
+  const today = () => new Date().toISOString().slice(0, 10);
+  async function downloadTemplate() {
+    const XLSX = await T.loadXlsx();
+    const head = T.IMPORT_COLUMNS.map((c) => c[0]);
+    const ex = ["1012345678", "مثال: محمد عبدالله سعد الغامدي", "سعودي", "ذكر", "1995-04-21", "0551234567", "name@example.com", "الرياض", "السويدي", "بكالوريوس", "تربية خاصة", "", ""];
+    saveBook(XLSX, [
+      ["المتطوعون", [head, ex], [16, 30, 12, 8, 14, 13, 26, 12, 12, 14, 16, 18, 16]],
+      ["التعليمات", [["التعليمات"], ["امسح صف المثال، واكتب كل متطوع في صف."], ["رقم الهوية أو الإقامة والاسم إلزاميان، والباقي اختياري."], ["الجنسية: سعودي، أو اسم الجنسية مثل مصري."], ["الجنس: ذكر أو أنثى."], ["تاريخ الميلاد: 1995-04-21 أو 21/04/1995."], ["الجوال: 05xxxxxxxx."], ["البريد يلزم ليصل المتطوع رمز التحقق، وبدونه يتحقق بجواله."], ["إذا كان رقم الهوية موجودا من قبل، تتحدث بياناته بالقيم غير الفارغة."]], [70]]
+    ], "نموذج بيانات المتطوعين.xlsx");
+  }
+  async function exportAll() {
+    const XLSX = await T.loadXlsx();
+    const head = T.IMPORT_COLUMNS.map((c) => c[0]).concat(["البرامج", "عدد التسجيلات", "الساعات المعتمدة", "المصدر"]);
+    const rows = (V.volunteers || []).map((v) => { const st = volStats(v.nationalId); return T.IMPORT_COLUMNS.map(([, k]) => (k === "nationality" ? T.nationalityText(v) : v[k] || "")).concat([st.programs.join("، "), st.count, st.hours, v.source === "ملف" ? "ملف" : "تسجيل"]); });
+    saveBook(XLSX, [["المتطوعون", [head].concat(rows)]], `متطوعو غراس ${today()}.xlsx`);
+  }
+  async function exportPlatform() {
+    const XLSX = await T.loadXlsx();
+    const prog = $("#xlProg").value;
+    const vmap = {}; (V.volunteers || []).forEach((v) => (vmap[v.nationalId] = v));
+    const regs = (V.regs || []).filter((r) => r.status === S_.APPROVED && (!prog || r.programName === prog));
+    if (!regs.length) { K.toast("لا توجد تسجيلات معتمدة للتصدير"); return; }
+    const rows = regs.map((r) => {
+      const p = Object.assign({}, vmap[r.nationalId] || {}, r.person || {});
+      const val = { nationalId: p.nationalId, name: p.name, gender: p.gender, nationality: T.nationalityText(p), birthDate: p.birthDate, phone: p.phone, email: p.email, city: p.city, district: p.district,
+        qualification: p.qualification, major: p.major, employer: p.employer, jobTitle: p.jobTitle, program: r.programName, hours: Number(r.hours) || "", startDate: r.startDate, endDate: r.endDate, approvedAt: String(r.approvedAt || "").slice(0, 10), regId: r.regId };
+      return PLATFORM.map(([, k]) => (val[k] == null ? "" : val[k]));
+    });
+    saveBook(XLSX, [["المتطوعون", [PLATFORM.map((c) => c[0])].concat(rows)]], `منصة التطوع - ${prog || "كل البرامج"} ${today()}.xlsx`);
+  }
+  async function importFile(f) {
+    let XLSX; try { XLSX = await T.loadXlsx(); } catch (e) { K.toast(e.message); return; }
+    let rows;
+    try {
+      const wb = XLSX.read(await f.arrayBuffer(), { type: "array", cellDates: true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: "" });
+      const hi = aoa.findIndex((r) => r.some((c) => /هوية|إقامة|اقامة/.test(String(c))));
+      if (hi < 0) { K.toast("ما لقينا عمود رقم الهوية. استخدم النموذج"); return; }
+      const head = aoa[hi].map((c) => String(c).trim());
+      const col = {};
+      T.IMPORT_COLUMNS.forEach(([label, k]) => {
+        let i = head.indexOf(label);
+        if (i < 0) i = head.findIndex((h) => h && (h.includes(label.split(" ")[0]) || (k === "nationalId" && /هوية|إقامة/.test(h)) || (k === "phone" && /جوال/.test(h)) || (k === "email" && /بريد|إيميل|ايميل/.test(h)) || (k === "birthDate" && /ميلاد/.test(h)) || (k === "name" && /اسم/.test(h) && !/جنسية/.test(h))));
+        if (i >= 0) col[k] = i;
+      });
+      rows = aoa.slice(hi + 1).map((r, n) => ({ n: hi + n + 2, raw: r })).filter((x) => x.raw.some((c) => String(c).trim()) && !/^مثال/.test(String(x.raw[col.name] || "")));
+      rows = rows.map((x) => { const o = {}; Object.keys(col).forEach((k) => (o[k] = x.raw[col[k]])); return Object.assign({ n: x.n }, T.normalizeImported(o)); });
+    } catch (e) { K.toast("تعذر قراءة الملف، تأكد أنه Excel"); return; }
+    const exist = new Set((V.volunteers || []).map((v) => v.nationalId));
+    const seen = new Set();
+    rows.forEach((r) => { if (!r.errors.length && seen.has(r.person.nationalId)) r.errors.push("رقم الهوية مكرر في الملف"); seen.add(r.person.nationalId); });
+    const good = rows.filter((r) => !r.errors.length), bad = rows.filter((r) => r.errors.length), warn = good.filter((r) => r.warns.length);
+    const nNew = good.filter((r) => !exist.has(r.person.nationalId)).length;
+    const li = (r, list) => `<li><b>صف ${toAr(r.n)}</b> — ${esc(r.person.name || r.person.nationalId || "")}: ${esc(list.join("، "))}</li>`;
+    modal("مراجعة الملف قبل الحفظ", `<div class="stat-row">
+        <div class="stat" style="--c:var(--st-approved);cursor:default"><b>${toAr(nNew)}</b><span>متطوع جديد</span></div>
+        <div class="stat" style="--c:var(--st-pending);cursor:default"><b>${toAr(good.length - nNew)}</b><span>تحديث بيانات</span></div>
+        <div class="stat" style="--c:var(--danger);cursor:default"><b>${toAr(bad.length)}</b><span>صف مرفوض</span></div></div>
+      ${bad.length ? `<h3 class="sec-title">صفوف لن تُرفع</h3><ul class="xl-errs">${bad.slice(0, 30).map((r) => li(r, r.errors)).join("")}</ul>` : ""}
+      ${warn.length ? `<h3 class="sec-title">تُرفع مع ملاحظة</h3><ul class="xl-errs warn">${warn.slice(0, 30).map((r) => li(r, r.warns)).join("")}</ul>` : ""}
+      ${!good.length ? '<p class="empty">ما فيه صفوف صالحة للرفع</p>' : ""}`,
+      `<button class="btn btn-ghost" type="button" data-close>إلغاء</button><span class="grow"></span><button class="btn btn-primary" type="button" id="xlGo" ${good.length ? "" : "disabled"}>احفظ ${toAr(good.length)} متطوع</button>`);
+    $("#xlGo").onclick = async (e) => {
+      e.target.disabled = true; e.target.textContent = "جار الحفظ…";
+      try {
+        const res = await call("importVolunteers", { rows: good.map((r) => r.person) });
+        closeModal(); K.toast(`أُضيف ${toAr(res.added)} وتحدّث ${toAr(res.updated)}`, 4000); viewVolunteers();
+      } catch (x) { K.toast(x.message); e.target.disabled = false; e.target.textContent = "حاول مرة أخرى"; }
+    };
   }
 
   // ===================== المشرفون =====================

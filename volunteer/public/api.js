@@ -172,6 +172,84 @@
     return dataToB64(await out.saveAsBase64({ dataUri: true }));
   }
 
+  // ——— العمر ———
+  function ageParts(iso) {
+    const b = new Date(String(iso || "") + "T00:00:00"), n = new Date();
+    if (isNaN(b) || b > n) return null;
+    let y = n.getFullYear() - b.getFullYear(), m = n.getMonth() - b.getMonth(), d = n.getDate() - b.getDate();
+    if (d < 0) { m--; d += new Date(n.getFullYear(), n.getMonth(), 0).getDate(); }
+    if (m < 0) { y--; m += 12; }
+    return { y, m, d };
+  }
+  // العدد مع المعدود بالعربية: ١ سنة، سنتان، ٣ سنوات، ١١ سنة
+  function arCount(n, w) {
+    if (n === 1) return w[0];
+    if (n === 2) return w[1];
+    if (n >= 3 && n <= 10) return toAr(n) + " " + w[2];
+    return toAr(n) + " " + w[3];
+  }
+  const W_YEAR = ["سنة", "سنتان", "سنوات", "سنة"], W_MONTH = ["شهر", "شهران", "أشهر", "شهرًا"], W_DAY = ["يوم", "يومان", "أيام", "يومًا"], W_AM = ["عام", "عامان", "أعوام", "عامًا"], W_HOUR = ["ساعة", "ساعتان", "ساعات", "ساعة"];
+  function ageSentence(a) {
+    const parts = [];
+    if (a.y) parts.push(arCount(a.y, W_YEAR));
+    if (a.m) parts.push(arCount(a.m, W_MONTH));
+    if (a.d) parts.push(arCount(a.d, W_DAY));
+    return parts.join(" و") || "يوم واحد";
+  }
+  const maskEmail = (e) => { const [u, dm] = String(e).split("@"); if (!dm) return ""; const [d1, ...rest] = dm.split("."); return u.slice(0, 2) + "•••@" + d1.slice(0, 1) + "•••." + rest.join("."); };
+  const maskPhone = (p) => { p = String(p || ""); return p ? p.slice(0, 3) + "•••" + p.slice(-4) : ""; };
+
+  // ——— Excel ———
+  let xlsxP = null;
+  function loadXlsx() {
+    if (window.XLSX) return Promise.resolve(window.XLSX);
+    if (!xlsxP) xlsxP = new Promise((res, rej) => { const s = document.createElement("script"); s.src = "vendor/xlsx.mini.min.js"; s.onload = () => res(window.XLSX); s.onerror = () => rej(new Error("تعذر تحميل أداة Excel")); document.head.appendChild(s); });
+    return xlsxP;
+  }
+  // أعمدة نموذج رفع المتطوعين (يطابقها الاستيراد)
+  const IMPORT_COLUMNS = [
+    ["رقم الهوية أو الإقامة", "nationalId"], ["الاسم الرباعي", "name"], ["الجنسية", "nationality"], ["الجنس", "gender"],
+    ["تاريخ الميلاد", "birthDate"], ["الجوال", "phone"], ["البريد الإلكتروني", "email"], ["المدينة", "city"], ["الحي", "district"],
+    ["المؤهل الدراسي", "qualification"], ["التخصص", "major"], ["جهة العمل", "employer"], ["المسمى الوظيفي", "jobTitle"]
+  ];
+  function isoDate(v) {
+    if (v == null || v === "") return "";
+    if (v instanceof Date) { const d = new Date(v.getTime() + 12 * 3600e3); return d.getUTCFullYear() + "-" + pad(d.getUTCMonth() + 1) + "-" + pad(d.getUTCDate()); }
+    if (typeof v === "number" && v > 1000 && v < 80000) { const d = new Date(Math.round((v - 25569) * 864e5)); return d.getUTCFullYear() + "-" + pad(d.getUTCMonth() + 1) + "-" + pad(d.getUTCDate()); }
+    const t = toEn(v).trim();
+    let m = t.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+    if (m) return m[1] + "-" + pad(m[2]) + "-" + pad(m[3]);
+    m = t.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/);
+    if (m) return m[3] + "-" + pad(m[2]) + "-" + pad(m[1]);
+    return "";
+  }
+  // صف من ملف Excel → بيانات متطوع، مع الأخطاء والتنبيهات
+  function normalizeImported(row) {
+    const g = (k) => String(row[k] == null ? "" : row[k]).trim();
+    const p = {}, errors = [], warns = [];
+    p.nationalId = toEn(g("nationalId")).replace(/\D/g, "");
+    if (!/^[12]\d{9}$/.test(p.nationalId)) errors.push("رقم الهوية غير صحيح");
+    p.name = g("name").replace(/\s+/g, " ");
+    if (!p.name) errors.push("الاسم فارغ");
+    const nat = g("nationality");
+    if (/سعود/.test(nat) || (!nat && p.nationalId[0] === "1")) { p.nationality = "سعودي"; p.nationalityName = ""; }
+    else { p.nationality = "غير سعودي"; p.nationalityName = nat && !/غير/.test(nat) ? nat : ""; }
+    const gd = g("gender");
+    p.gender = /ذكر|^m(ale)?$/i.test(gd) ? "ذكر" : /أنث|انث|^f(emale)?$/i.test(gd) ? "أنثى" : "";
+    p.birthDate = isoDate(row.birthDate);
+    if (g("birthDate") && !p.birthDate) warns.push("تاريخ الميلاد غير مفهوم");
+    let ph = toEn(g("phone")).replace(/\D/g, "");
+    if (/^9665\d{8}$/.test(ph)) ph = "0" + ph.slice(3);
+    if (/^5\d{8}$/.test(ph)) ph = "0" + ph;
+    if (ph && !/^05\d{8}$/.test(ph)) { warns.push("الجوال غير صحيح"); ph = ""; }
+    p.phone = ph;
+    const em = g("email").toLowerCase();
+    p.email = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em) ? em : "";
+    if (em && !p.email) warns.push("البريد غير صحيح");
+    ["city", "district", "qualification", "major", "employer", "jobTitle"].forEach((k) => { p[k] = g(k); });
+    return { person: p, errors, warns };
+  }
+
   // ——— الاتصال ———
   async function call(action, data) {
     data = data || {};
@@ -225,7 +303,7 @@
           { id: "p1", kind: "program", state: "مفتوح", order: 1, name: "برنامج بيان", desc: "برنامج قرائي للأطفال من ٨ إلى ١٢ سنة، يحتاج متطوعين لإدارة حلقات القراءة.", image: "", location: "مقر الجمعية — السويدي الغربي", startDate: "2026-12-06", endDate: "2027-01-28", days: ["الأحد", "الثلاثاء"], timeFrom: "16:00", timeTo: "19:00", hours: "48", seats: "20", gender: "الكل", employerSig: true, extras: [{ k: "المهام", v: "إدارة حلقة قراءة لمجموعة من ٨ أطفال" }, { k: "الزي", v: "رسمي محتشم" }], questions: [{ id: "q1", label: "هل سبق لك العمل مع الأطفال؟", type: "yesno", required: true, options: [] }, { id: "q2", label: "الفئة العمرية المفضلة", type: "choice", required: true, options: ["٨–٩ سنوات", "١٠–١٢ سنة"] }, { id: "q3", label: "السيرة الذاتية", type: "file", required: false, options: [] }], templateName: "قالب تجريبي", charterText: sampleCharter },
           { id: "p2", kind: "program", state: "مفتوح", order: 2, name: "نادي غراس", desc: "أنشطة صيفية رياضية وثقافية للأطفال.", image: "", location: "الرياض", startDate: "2027-06-20", endDate: "2027-07-30", days: ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء"], timeFrom: "08:00", timeTo: "12:00", hours: "96", seats: "12", gender: "رجال", employerSig: false, extras: [], questions: [{ id: "q1", label: "المهارة الرياضية أو الثقافية التي تجيدها", type: "text", required: true, options: [] }], templateName: "قالب تجريبي", charterText: sampleCharter }
         ],
-        volunteers: {},
+        volunteers: { "1010101010": { name: "عبدالله محمد صالح العتيبي", nationalId: "1010101010", nationality: "سعودي", nationalityName: "", gender: "ذكر", birthDate: "1976-09-08", phone: "0501112233", email: "abdullah@example.com", city: "الرياض", district: "السويدي", qualification: "بكالوريوس", major: "إدارة أعمال", employer: "", jobTitle: "", source: "ملف" } },
         regs: []
       };
     }
@@ -298,9 +376,16 @@
       switch (action) {
         case "config":
           return { ok: true, programs: d.programs.filter((p) => p.state === "مفتوح").sort((a, b) => a.order - b.order).map((p) => pub(d, p)) };
-        case "lookup": {
+        case "lookupStart": {
           const v = d.volunteers[toEn(x.nationalId)];
-          return { ok: true, person: v && toEn(v.phone) === toEn(x.phone) ? v : null };
+          if (!v) return { ok: true, found: false };
+          return v.email ? { ok: true, found: true, method: "email", hint: maskEmail(v.email), demo: "1234" } : { ok: true, found: true, method: "phone", hint: maskPhone(v.phone) };
+        }
+        case "lookupVerify": {
+          const v = d.volunteers[toEn(x.nationalId)];
+          if (!v) fail("لم نجد بيانات بهذا الرقم");
+          if (x.code != null ? String(x.code) !== "1234" : toEn(x.phone) !== toEn(v.phone)) fail(x.code != null ? "الرمز غير صحيح" : "الجوال لا يطابق المسجل");
+          return { ok: true, person: v, vtoken: "demo-" + uid() };
         }
         case "submit": {
           const p = progOf(d, x.programId); if (!p.id || p.state !== "مفتوح") fail("التسجيل في هذا البرنامج مغلق");
@@ -308,7 +393,7 @@
           if (d.regs.some((r) => r.programId === p.id && r.person.nationalId === x.person.nationalId && r.status !== STATUS.REJECTED)) fail("سبق لك التسجيل في هذا البرنامج. افتح رابط المتابعة الذي وصلك بالبريد");
           const emp = !!p.employerSig && !isSaudi(x.person);
           const r = { regId: "GV-" + (1001 + d.regs.length), token: uid(), created: now, updated: now, programId: p.id, programName: p.name, person: x.person, answers: x.answers || {}, files: x.files || {}, signature: x.signature, employerRequired: emp, employerFile: null, status: emp ? STATUS.EMPLOYER : STATUS.PENDING, note: "", reason: "", approvedBy: "", approvedAt: "", final: "" };
-          d.regs.push(r); d.volunteers[x.person.nationalId] = x.person; save(d);
+          d.regs.push(r); d.volunteers[x.person.nationalId] = Object.assign({}, d.volunteers[x.person.nationalId] || {}, x.person); save(d);
           return { ok: true, regId: r.regId, token: r.token, status: r.status };
         }
         case "status": {
@@ -400,11 +485,27 @@
           if (x.newAdminCode) d.adminCode = x.newAdminCode;
           save(d); return { ok: true };
         }
+        case "adminVolunteers": {
+          admin(d, x);
+          const vols = Object.values(d.volunteers);
+          const regs = d.regs.map((r) => { const p = progOf(d, r.programId); return { regId: r.regId, nationalId: r.person.nationalId, programName: r.programName, status: r.status, hours: p.hours || "", startDate: p.startDate || "", endDate: p.endDate || "", created: r.created, approvedAt: r.approvedAt, person: r.person }; });
+          return { ok: true, volunteers: vols, regs };
+        }
+        case "importVolunteers": {
+          admin(d, x);
+          let added = 0, updated = 0;
+          (x.rows || []).forEach((p) => {
+            const old = d.volunteers[p.nationalId];
+            if (old) { Object.keys(p).forEach((k) => { if (p[k]) old[k] = p[k]; }); updated++; }
+            else { d.volunteers[p.nationalId] = Object.assign({ source: "ملف" }, p); added++; }
+          });
+          save(d); return { ok: true, added, updated };
+        }
         default: fail("عملية غير معروفة");
       }
     }
     return { handle, reset: () => localStorage.removeItem(KEY) };
   })();
 
-  window.TG = { LIVE, STATUS, DAYS, PERSON_FIELDS, IMAGE_KEYS, PLACEHOLDERS, call, toAr, toEn, esc, fmtDate, fmtTime, programTime, nationalityText, isSaudi, placeholderMap, fillText, phKey, readAsDataURL, compressImage, transparentPng, packFile, b64ToBlob, dataToB64, loadPdfLib, mergePdf, Mock };
+  window.TG = { ageParts, arCount, ageSentence, W_AM, W_HOUR, maskEmail, maskPhone, loadXlsx, IMPORT_COLUMNS, normalizeImported, isoDate, LIVE, STATUS, DAYS, PERSON_FIELDS, IMAGE_KEYS, PLACEHOLDERS, call, toAr, toEn, esc, fmtDate, fmtTime, programTime, nationalityText, isSaudi, placeholderMap, fillText, phKey, readAsDataURL, compressImage, transparentPng, packFile, b64ToBlob, dataToB64, loadPdfLib, mergePdf, Mock };
 })();

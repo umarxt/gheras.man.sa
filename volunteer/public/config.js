@@ -5,5 +5,13 @@
 window.TG_CONFIG = {
   APPS_SCRIPT_URL: "",
   // الحد الأقصى لحجم الملف المرفوع (ميغابايت)
-  MAX_FILE_MB: 10
+  MAX_FILE_MB: 10,
+  // أعمدة ملف «تصدير لمنصة التطوع» بالترتيب: [عنوان العمود كما تطلبه المنصة، الحقل]
+  // الحقول: nationalId name gender nationality birthDate phone email city district qualification major employer jobTitle
+  //          program hours startDate endDate approvedAt regId
+  PLATFORM_COLUMNS: [
+    ["رقم الهوية", "nationalId"], ["الاسم", "name"], ["الجنس", "gender"], ["الجنسية", "nationality"], ["تاريخ الميلاد", "birthDate"],
+    ["رقم الجوال", "phone"], ["البريد الإلكتروني", "email"], ["المدينة", "city"], ["المؤهل العلمي", "qualification"],
+    ["اسم الفرصة", "program"], ["عدد الساعات", "hours"], ["تاريخ البداية", "startDate"], ["تاريخ النهاية", "endDate"]
+  ]
 };

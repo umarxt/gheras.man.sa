@@ -77,7 +77,7 @@ const SHEETS = {
     ['templateId', 'معرف القالب'], ['templateName', 'اسم القالب'], ['charterText', 'نص القالب'], ['image', 'الصورة'], ['updated', 'آخر تحديث']
   ] },
   volunteers: { name: 'المتطوعون', cols: PERSON_FIELDS.map(function (f) { return [f[0], f[1]]; })
-    .concat([['nationalityName', 'اسم الجنسية'], ['created', 'أول تسجيل'], ['updated', 'آخر تحديث']]) },
+    .concat([['nationalityName', 'اسم الجنسية'], ['created', 'أول تسجيل'], ['updated', 'آخر تحديث'], ['source', 'المصدر']]) },
   supervisors: { name: 'المشرفون', cols: [
     ['id', 'المعرف'], ['name', 'الاسم'], ['title', 'الصفة'], ['codeHash', 'رمز الاعتماد (مشفر)'],
     ['signatureId', 'ملف التوقيع'], ['active', 'نشط'], ['updated', 'آخر تحديث']
@@ -137,15 +137,16 @@ function doPost(e) {
   return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
 }
 const ROUTES = {
-  config: apiConfig, lookup: apiLookup, submit: apiSubmit, status: apiStatus, doc: apiDoc,
+  config: apiConfig, lookupStart: apiLookupStart, lookupVerify: apiLookupVerify, submit: apiSubmit, status: apiStatus, doc: apiDoc,
   uploadEmployer: apiUploadEmployer, resubmit: apiResubmit, resendLinks: apiResendLinks,
   adminLogin: function () { return {}; }, adminLoad: apiAdminLoad, regDetail: apiRegDetail, adminFile: apiAdminFile,
   checkSupervisor: apiCheckSupervisor, approve: apiApprove, requestChanges: apiRequestChanges, reject: apiReject,
   saveProgram: apiSaveProgram, previewTemplate: apiPreviewTemplate, saveSupervisor: apiSaveSupervisor,
-  removeSupervisor: apiRemoveSupervisor, saveSettings: apiSaveSettings
+  removeSupervisor: apiRemoveSupervisor, saveSettings: apiSaveSettings,
+  adminVolunteers: apiAdminVolunteers, importVolunteers: apiImportVolunteers
 };
 const ADMIN_ACTIONS = ['adminLogin', 'adminLoad', 'regDetail', 'adminFile', 'checkSupervisor', 'approve', 'requestChanges',
-  'reject', 'saveProgram', 'previewTemplate', 'saveSupervisor', 'removeSupervisor', 'saveSettings'];
+  'reject', 'saveProgram', 'previewTemplate', 'saveSupervisor', 'removeSupervisor', 'saveSettings', 'adminVolunteers', 'importVolunteers'];
 
 // ===================== واجهة المتطوع =====================
 function apiConfig() {
@@ -156,16 +157,57 @@ function apiConfig() {
   return { programs: list };
 }
 
-function apiLookup(p) {
-  const id = digits(p.nationalId), ph = digits(p.phone);
-  if (id.length !== 10 || ph.length !== 10) return { person: null };
+// التعرف على متطوع مسجل: يرسل رمزا من ٤ أرقام إلى بريده المسجل (أو يتحقق بجواله إن لم يكن له بريد)
+function apiLookupStart(p) {
+  const id = digits(p.nationalId);
+  if (!/^[12]\d{9}$/.test(id)) return { found: false };
   const v = table('volunteers').find('nationalId', id);
-  if (!v || v.phone !== ph) return { person: null };
+  if (!v) return { found: false };
+  if (v.email) {
+    const c = CacheService.getScriptCache();
+    const last = Number(c.get('otp_t_' + id) || 0);
+    if (Date.now() - last > 55000) {
+      const sent = Number(c.get('otp_c_' + id) || 0);
+      if (sent >= 6) fail('طلبت رموزا كثيرة، حاول بعد ١٠ دقائق');
+      const code = String(Math.floor(1000 + Math.random() * 9000));
+      c.put('otp_' + id, JSON.stringify({ h: hash('otp|' + id + '|' + code), n: 0 }), 600);
+      c.put('otp_t_' + id, String(Date.now()), 600);
+      c.put('otp_c_' + id, String(sent + 1), 600);
+      mail(v.email, 'رمز التحقق ' + code + ' — تطوع غراس', 'رمز التحقق',
+        '<p>أهلا ' + h(firstName(v.name)) + '،</p><p>رمز التحقق لعرض بياناتك في تطوع غراس:</p>' +
+        '<p style="font-size:32px;letter-spacing:8px;color:#1C437D;margin:10px 0" dir="ltr">' + code + '</p>' +
+        '<p style="color:#6F6F6E;font-size:13px">صالح لمدة ١٠ دقائق. إذا ما طلبته، تجاهل هذه الرسالة.</p>');
+    }
+    return { found: true, method: 'email', hint: maskEmail(v.email) };
+  }
+  return v.phone ? { found: true, method: 'phone', hint: maskPhone(v.phone) } : { found: false };
+}
+function apiLookupVerify(p) {
+  const id = digits(p.nationalId);
+  const v = table('volunteers').find('nationalId', id);
+  if (!v) fail('لم نجد بيانات بهذا الرقم');
+  const c = CacheService.getScriptCache();
+  if (p.code != null) {
+    const o = J(c.get('otp_' + id), null);
+    if (!o) fail('انتهت صلاحية الرمز، اضغط «إعادة الإرسال»');
+    if (o.n >= 5) fail('محاولات كثيرة، اضغط «إعادة الإرسال» بعد دقيقة');
+    if (o.h !== hash('otp|' + id + '|' + digits(p.code))) { o.n++; c.put('otp_' + id, JSON.stringify(o), 600); fail('الرمز غير صحيح'); }
+    c.remove('otp_' + id);
+  } else {
+    if (v.email) fail('تحقق بالرمز المرسل إلى بريدك');
+    throttle('ph_' + id);
+    if (!v.phone || digits(p.phone) !== v.phone) { failed('ph_' + id); fail('الجوال لا يطابق المسجل'); }
+  }
+  const vt = newToken();
+  c.put('vt_' + vt, id, 21600);
   const person = {};
   PERSON_FIELDS.forEach(function (f) { person[f[0]] = v[f[0]] || ''; });
   person.nationalityName = v.nationalityName || '';
-  return { person: person };
+  return { person: person, vtoken: vt };
 }
+function verifiedFor(vtoken, id) { return !!vtoken && CacheService.getScriptCache().get('vt_' + vtoken) === id; }
+function maskEmail(e) { const a = String(e).split('@'); if (a.length < 2) return ''; const d = a[1].split('.'); return a[0].slice(0, 2) + '•••@' + d[0].slice(0, 1) + '•••.' + d.slice(1).join('.'); }
+function maskPhone(p) { p = String(p || ''); return p ? p.slice(0, 3) + '•••' + p.slice(-4) : ''; }
 
 function apiSubmit(p) {
   rememberSite(p.siteUrl);
@@ -204,7 +246,7 @@ function apiSubmit(p) {
   reg.files = JSON.stringify(saveQuestionFiles(prog, reg, p.files, {}));
   table('regs').put(reg);
   try { ensureDraft(reg, prog); } catch (err) { console.error(err); notifyAdminError('تعذر توليد الميثاق للتسجيل ' + reg.regId, err); }
-  upsertVolunteer(JSON.parse(reg.person));
+  upsertVolunteer(JSON.parse(reg.person), verifiedFor(p.vtoken, person.nationalId));
   writeProgramSheet(reg, prog);
   mailVolunteerReceived(reg, prog);
   mailAdmin('تسجيل جديد: ' + reg.name + ' — ' + prog.name, 'تسجيل جديد', regSummaryHtml(reg) +
@@ -276,7 +318,7 @@ function apiResubmit(p) {
   if (r.draftId) { trash(r.draftId); r.draftId = ''; }
   table('regs').put(r);
   try { ensureDraft(r, prog); } catch (err) { console.error(err); }
-  upsertVolunteer(person);
+  upsertVolunteer(person, true);
   writeProgramSheet(r, prog);
   mailAdmin('أعاد الإرسال بعد التعديل: ' + r.name + ' — ' + r.programName, 'أعاد المتطوع الإرسال', regSummaryHtml(r));
   return { status: r.status };
@@ -485,6 +527,57 @@ function apiSaveSettings(p) {
     P.setProperty('ADMIN_HASH', hash(String(p.newAdminCode)));
   }
   return {};
+}
+
+function apiAdminVolunteers() {
+  const progs = {};
+  allPrograms().forEach(function (p) { progs[p.id] = p; });
+  const vols = table('volunteers').all().map(function (v) { delete v._row; return v; });
+  const regs = table('regs').all().map(function (r) {
+    const p = progs[r.programId] || {};
+    return { regId: r.regId, nationalId: r.nationalId, programName: r.programName, status: r.status, hours: p.hours || '',
+      startDate: p.startDate || '', endDate: p.endDate || '', created: r.created, approvedAt: r.approvedAt, person: J(r.person, {}) };
+  });
+  return { volunteers: vols, regs: regs };
+}
+
+// رفع بيانات المتطوعين من ملف Excel (يُقرأ في المتصفح ويصل هنا صفوفا)
+function apiImportVolunteers(p) {
+  const rows = (p.rows || []).slice(0, 5000);
+  const lock = LockService.getScriptLock(); lock.waitLock(30000);
+  try {
+    const t = table('volunteers'), all = t.all(), idx = {};
+    all.forEach(function (o) { idx[o.nationalId] = o; });
+    let added = 0, updated = 0;
+    const dirty = [], fresh = [];
+    rows.forEach(function (x) {
+      const q = cleanImported(x); if (!q) return;
+      const o = idx[q.nationalId];
+      if (o) {
+        Object.keys(q).forEach(function (k) { if (q[k]) o[k] = q[k]; });
+        o.updated = now(); if (dirty.indexOf(o) < 0) dirty.push(o); updated++;
+      } else {
+        const n = Object.assign({}, q, { source: 'ملف', created: now(), updated: now() });
+        idx[q.nationalId] = n; fresh.push(n); added++;
+      }
+    });
+    t.bulk(dirty, fresh);
+    return { added: added, updated: updated };
+  } finally { lock.releaseLock(); }
+}
+function cleanImported(x) {
+  x = x || {};
+  const q = {};
+  PERSON_FIELDS.forEach(function (f) { q[f[0]] = str(x[f[0]], 150); });
+  q.nationalityName = str(x.nationalityName, 60);
+  q.nationalId = digits(q.nationalId);
+  if (!/^[12]\d{9}$/.test(q.nationalId) || !q.name) return null;
+  if (['سعودي', 'غير سعودي'].indexOf(q.nationality) < 0) q.nationality = q.nationalId[0] === '1' ? 'سعودي' : 'غير سعودي';
+  if (['ذكر', 'أنثى'].indexOf(q.gender) < 0) q.gender = '';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(q.birthDate)) q.birthDate = '';
+  q.phone = digits(q.phone); if (!/^05\d{8}$/.test(q.phone)) q.phone = '';
+  q.email = q.email.toLowerCase(); if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(q.email)) q.email = '';
+  return q;
 }
 
 // ===================== الميثاق والوثائق =====================
@@ -765,6 +858,11 @@ function table(key) {
     sh.getRange(1, 1, sh.getMaxRows(), def.cols.length).setNumberFormat('@');
   }
   const n = def.cols.length;
+  if (sh.getLastColumn() < n) { // أعمدة جديدة أضيفت بعد التركيب
+    sh.getRange(1, 1, 1, n).setValues([def.cols.map(function (c) { return c[1]; })]);
+    styleHeader(sh, n);
+    sh.getRange(1, 1, sh.getMaxRows(), n).setNumberFormat('@');
+  }
   return {
     all: function () {
       const last = sh.getLastRow();
@@ -781,7 +879,18 @@ function table(key) {
       sh.getRange(r, 1, 1, n).setNumberFormat('@').setValues([def.cols.map(function (c) { return clip(o[c[0]]); })]);
       o._row = r; return o;
     },
-    put: function (o) { sh.getRange(o._row, 1, 1, n).setValues([def.cols.map(function (c) { return clip(o[c[0]]); })]); }
+    put: function (o) { sh.getRange(o._row, 1, 1, n).setValues([def.cols.map(function (c) { return clip(o[c[0]]); })]); },
+    // تحديث صفوف موجودة وإضافة صفوف جديدة بكتابة واحدة
+    bulk: function (changed, added) {
+      const toRow = function (o) { return def.cols.map(function (c) { return clip(o[c[0]]); }); };
+      const last = sh.getLastRow();
+      if (changed.length && last >= 2) {
+        const block = sh.getRange(2, 1, last - 1, n).getValues();
+        changed.forEach(function (o) { block[o._row - 2] = toRow(o); });
+        sh.getRange(2, 1, last - 1, n).setNumberFormat('@').setValues(block);
+      }
+      if (added.length) sh.getRange(Math.max(2, last + 1), 1, added.length, n).setNumberFormat('@').setValues(added.map(toRow));
+    }
   };
 }
 function cell(v) {
@@ -925,10 +1034,10 @@ function saveUpload(f, parent, name) {
   const ext = mime === 'application/pdf' ? '.pdf' : mime === 'image/png' ? '.png' : '.jpg';
   return parent.createFile(Utilities.newBlob(bytes, mime, name + ext));
 }
-function upsertVolunteer(p) {
+function upsertVolunteer(p, verified) {
   const t = table('volunteers'), o = t.find('nationalId', p.nationalId);
-  if (o && o.phone !== p.phone) return; // لا نغير بيانات شخص آخر بنفس الهوية
-  const row = o || { created: now() };
+  if (o && o.phone && o.phone !== p.phone && !verified) return; // لا نغير بيانات شخص آخر بنفس الهوية دون تحقق
+  const row = o || { created: now(), source: 'تسجيل' };
   Object.assign(row, p, { updated: now() });
   if (o) t.put(row); else t.add(row);
 }
