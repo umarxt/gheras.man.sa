@@ -186,8 +186,7 @@
       const a = T.ageParts(v);
       if (!a || a.y < 3 || a.y > 100 || ageShown === v) return;
       ageShown = v;
-      if (!a.m && !a.d) topToast("كل عام وأنت بخير", `عمرك اليوم ${T.arCount(a.y, T.W_YEAR)} بالتمام`, 0, "cake");
-      else topToast(`عمرك اليوم ${T.ageSentence(a)}`, "كل يوم منها فرصة تزرع فيها أثرا", 0, "rings");
+      topToast(`عمرك اليوم ${T.ageSentence(a)}`, "كل يوم منها فرصة تزرع فيها أثرا", 0, "rings");
     }, 650);
   }
 
