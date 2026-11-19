@@ -167,7 +167,7 @@
       if (!S.person.email && keep.email) S.person.email = keep.email;
       S.vtoken = r.vtoken;
       saveDraft(); renderStep();
-      topToast(`أهلا ${esc(String(r.person.name || "").split(" ")[0])}، رجّعنا لك بياناتك`, "عدّل أي شيء تغيّر، ونحدّثه في سجلك");
+      topToast(`أهلا ${esc(String(r.person.name || "").split(" ")[0])}، رجّعنا لك بياناتك`, "عدّل أي شيء تغيّر، ونحدّثه في سجلك", 0, "user");
     } catch (e) { er.hidden = false; er.style.color = "var(--danger)"; er.textContent = e.message; $("#vGo").disabled = false; }
   }
 
@@ -186,15 +186,23 @@
       const a = T.ageParts(v);
       if (!a || a.y < 3 || a.y > 100 || ageShown === v) return;
       ageShown = v;
-      if (!a.m && !a.d) topToast("كل عام وأنت بخير 🎂", `عمرك اليوم ${T.arCount(a.y, T.W_YEAR)} بالتمام`);
-      else topToast("ما شاء الله تبارك الله", `عمرك اليوم ${T.ageSentence(a)}`);
+      if (!a.m && !a.d) topToast("كل عام وأنت بخير", `عمرك اليوم ${T.arCount(a.y, T.W_YEAR)} بالتمام`, 0, "cake");
+      else topToast("ما شاء الله تبارك الله", `عمرك اليوم ${T.ageSentence(a)}`, 0, "star");
     }, 650);
   }
 
   // ——— إشعار علوي لطيف ———
-  function topToast(title, sub, ms) {
+  const TT_ICONS = {
+    work: '<svg class="spin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5.6"/><circle cx="12" cy="12" r="2.2"/><path d="M12 2.6v3.8M12 17.6v3.8M2.6 12h3.8M17.6 12h3.8M5.4 5.4l2.7 2.7M15.9 15.9l2.7 2.7M18.6 5.4l-2.7 2.7M8.1 15.9l-2.7 2.7"/></svg>',
+    star: '<svg viewBox="0 0 24 24"><path d="M12 3.5l2.5 5.2 5.7.8-4.1 4 1 5.6-5.1-2.7-5.1 2.7 1-5.6-4.1-4 5.7-.8Z"/></svg>',
+    cake: '<svg viewBox="0 0 24 24"><path d="M4 20h16M5 20v-6.5a1.5 1.5 0 0 1 1.5-1.5h11a1.5 1.5 0 0 1 1.5 1.5V20M5 15.5c1.2 1 2.3 1 3.5 0s2.3-1 3.5 0 2.3 1 3.5 0 2.3-1 3.5 0M12 12V8.5M12 4.5c.9 1 .9 2 0 3-.9-1-.9-2 0-3Z"/></svg>',
+    hour: '<svg viewBox="0 0 24 24"><path d="M7 3h10M7 21h10M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9"/></svg>',
+    user: '<svg viewBox="0 0 24 24"><circle cx="10" cy="8" r="3.6"/><path d="M3.5 20c.7-3.8 3.3-5.8 6.5-5.8 1.4 0 2.6.4 3.6 1M15 18.5l2 2 4-4.5"/></svg>'
+  };
+  function topToast(title, sub, ms, kind) {
     const t = $("#toastTop"); if (!t) return;
-    t.innerHTML = `<span class="tt-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 21c-4.5-3.2-8-6.4-8-10.2A4.6 4.6 0 0 1 12 8a4.6 4.6 0 0 1 8 2.8C20 14.6 16.5 17.8 12 21Z"/></svg></span><span class="tt-tx"><strong>${title}</strong>${sub ? `<span>${sub}</span>` : ""}</span>`;
+    t.dataset.kind = kind || "star";
+    t.innerHTML = `<span class="tt-ic" aria-hidden="true">${TT_ICONS[kind] || TT_ICONS.star}</span><span class="tt-tx"><strong>${title}</strong>${sub ? `<span>${sub}</span>` : ""}</span>`;
     t.classList.remove("show"); void t.offsetWidth; t.classList.add("show");
     clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), ms || 5200);
   }
@@ -590,7 +598,7 @@
     if (key === "person") { if (f.id === "birthDate") updateAge(true); readPerson(); saveDraft(); return; }
     if (key === "path" && f.name === "programId") {
       const pr = programs.find((x) => x.id === f.value);
-      if (pr && pr.hours) topToast(`${T.arCount(Number(pr.hours), T.W_HOUR)} تطوعية في رصيدك`, `بنهاية «${esc(pr.name)}» تحصل عليها، شكرا لعطائك`, 4200);
+      if (pr && pr.hours) topToast(`${T.arCount(Number(pr.hours), T.W_HOUR)} تطوعية في رصيدك`, `بنهاية «${esc(pr.name)}» تحصل عليها، شكرا لعطائك`, 4200, "hour");
       return;
     }
     if (key !== "details") return;
@@ -612,7 +620,7 @@
     delete b.dataset.sure; b.textContent = "سجّل متطوعا"; store.del(DRAFT); startNew();
   };
   $("#resumeBtn").onclick = () => resumeDraft();
-  $("#teamsBtn").onclick = () => topToast("بوابة الفرق قيد البناء", "نجهّزها لكم الحين، وقريبا تفتح أبوابها", 4200);
+  $("#teamsBtn").onclick = () => topToast("بوابة الفرق قيد البناء", "جار العمل عليها، وقريبا تفتح أبوابها", 4200, "work");
   $("#myRegs").addEventListener("click", (e) => { const b = e.target.closest("[data-t]"); if (b) openStatus(b.dataset.t); });
   $("#nextBtn").onclick = next;
   $("#prevBtn").onclick = prev;

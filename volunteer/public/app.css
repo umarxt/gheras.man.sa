@@ -397,8 +397,13 @@ body.stage-mode .mode-pill { color: rgba(255, 255, 255, .8); }
 }
 .toast-top.show { opacity: 1; transform: none; }
 .toast-top .tt-ic { flex: none; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(145deg, var(--teal), var(--green)); }
-.toast-top .tt-ic svg { width: 19px; height: 19px; fill: #fff; }
-.toast-top.show .tt-ic { animation: heartBeat 1.2s .2s ease-in-out 2; }
+.toast-top .tt-ic svg { width: 21px; height: 21px; fill: none; stroke: #fff; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.toast-top.show .tt-ic { animation: heartBeat 1.2s .2s ease-in-out 1; }
+.toast-top .tt-ic svg.spin { animation: ttSpin 3s linear infinite; }
+.toast-top[data-kind="work"] .tt-ic { background: linear-gradient(145deg, var(--navy), var(--teal)); }
+.toast-top[data-kind="hour"] .tt-ic svg { animation: ttFlip 2.4s ease-in-out infinite; }
+@keyframes ttSpin { to { transform: rotate(360deg); } }
+@keyframes ttFlip { 0%, 70% { transform: rotate(0); } 100% { transform: rotate(180deg); } }
 @keyframes heartBeat { 0%, 100% { transform: scale(1); } 30% { transform: scale(1.14); } 60% { transform: scale(.96); } }
 .toast-top .tt-tx { display: grid; line-height: 1.5; }
 .toast-top strong { font-weight: 500; font-size: 16px; }
