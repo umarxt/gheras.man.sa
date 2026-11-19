@@ -2,7 +2,7 @@
 (function () {
   "use strict";
   const K = GherasKit, $ = K.$, $$ = K.$$, T = TG, esc = T.esc, toAr = T.toAr, S_ = T.STATUS;
-  const DRAFT = "tg-draft", REGS = "tg-regs";
+  const DRAFT = T.LIVE ? "tg-draft-live" : "tg-draft", REGS = T.LIVE ? "tg-regs-live" : "tg-regs"; // تجارب وضع التجربة لا تختلط بالتسجيلات الحقيقية
   const store = {
     get(k, d) { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
