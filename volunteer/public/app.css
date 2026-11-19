@@ -400,6 +400,13 @@ body.stage-mode .mode-pill { color: rgba(255, 255, 255, .8); }
 .toast-top .tt-ic svg { width: 21px; height: 21px; fill: none; stroke: #fff; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 .toast-top.show .tt-ic { animation: heartBeat 1.2s .2s ease-in-out 1; }
 .toast-top .tt-ic svg.spin { animation: ttSpin 3s linear infinite; }
+.toast-top[data-kind="rings"] .tt-ic { background: linear-gradient(145deg, var(--green), var(--lime)); }
+.toast-top .tt-ic svg.rings circle { stroke-width: 1.5; opacity: 0; transform-origin: 12px 12px; animation: ringIn .5s var(--ease-out) forwards; }
+.toast-top .tt-ic svg.rings circle:nth-child(2) { animation-delay: .15s; }
+.toast-top .tt-ic svg.rings circle:nth-child(3) { animation-delay: .3s; }
+.toast-top .tt-ic svg.rings circle:nth-child(4) { animation-delay: .45s; }
+.toast-top .tt-ic svg.rings path { stroke-width: 1.3; opacity: .7; }
+@keyframes ringIn { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: none; } }
 .toast-top[data-kind="work"] .tt-ic { background: linear-gradient(145deg, var(--navy), var(--teal)); }
 .toast-top[data-kind="hour"] .tt-ic svg { animation: ttFlip 2.4s ease-in-out infinite; }
 @keyframes ttSpin { to { transform: rotate(360deg); } }

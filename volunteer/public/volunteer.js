@@ -187,13 +187,14 @@
       if (!a || a.y < 3 || a.y > 100 || ageShown === v) return;
       ageShown = v;
       if (!a.m && !a.d) topToast("كل عام وأنت بخير", `عمرك اليوم ${T.arCount(a.y, T.W_YEAR)} بالتمام`, 0, "cake");
-      else topToast("ما شاء الله تبارك الله", `عمرك اليوم ${T.ageSentence(a)}`, 0, "star");
+      else topToast(`عمرك اليوم ${T.ageSentence(a)}`, "كل يوم منها فرصة تزرع فيها أثرا", 0, "rings");
     }, 650);
   }
 
   // ——— إشعار علوي لطيف ———
   const TT_ICONS = {
     work: '<svg class="spin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5.6"/><circle cx="12" cy="12" r="2.2"/><path d="M12 2.6v3.8M12 17.6v3.8M2.6 12h3.8M17.6 12h3.8M5.4 5.4l2.7 2.7M15.9 15.9l2.7 2.7M18.6 5.4l-2.7 2.7M8.1 15.9l-2.7 2.7"/></svg>',
+    rings: '<svg class="rings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="7.8"/><circle cx="12" cy="12" r="10"/><path d="M12 12l6.6 5.4"/></svg>',
     star: '<svg viewBox="0 0 24 24"><path d="M12 3.5l2.5 5.2 5.7.8-4.1 4 1 5.6-5.1-2.7-5.1 2.7 1-5.6-4.1-4 5.7-.8Z"/></svg>',
     cake: '<svg viewBox="0 0 24 24"><path d="M4 20h16M5 20v-6.5a1.5 1.5 0 0 1 1.5-1.5h11a1.5 1.5 0 0 1 1.5 1.5V20M5 15.5c1.2 1 2.3 1 3.5 0s2.3-1 3.5 0 2.3 1 3.5 0 2.3-1 3.5 0M12 12V8.5M12 4.5c.9 1 .9 2 0 3-.9-1-.9-2 0-3Z"/></svg>',
     hour: '<svg viewBox="0 0 24 24"><path d="M7 3h10M7 21h10M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9"/></svg>',
