@@ -3,7 +3,7 @@
 // إذا تركته فارغا يعمل الموقع في «وضع التجربة»: البيانات تحفظ في هذا المتصفح فقط،
 // ورمز الإدارة ورمز اعتماد المشرف التجريبي كلاهما 1234.
 window.TG_CONFIG = {
-  APPS_SCRIPT_URL: "",
+  APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbypwFfpkIf35PetmbqsqMHcJ7qJhnUSJk2o7bEPGuvI7pXqPb6gLlZ3fc8J8JP7GtoI/exec",
   // الحد الأقصى لحجم الملف المرفوع (ميغابايت)
   MAX_FILE_MB: 10,
   // أعمدة ملف «تصدير لمنصة التطوع» بالترتيب: [عنوان العمود كما تطلبه المنصة، الحقل]
