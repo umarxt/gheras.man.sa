@@ -389,6 +389,13 @@
   }
 
   // ——— التنقل ———
+  // اختيار التطوع العام أو برنامج ينقل للخطوة التالية تلقائيا بعد لحظة
+  let autoT;
+  function autoNext(ms) {
+    clearTimeout(autoT);
+    const at = S.step;
+    autoT = setTimeout(() => { if (S.step === at && steps()[S.step] === "path") next(); }, ms || 450);
+  }
   async function next() {
     const key = steps()[S.step];
     if (key === "person") {
@@ -605,8 +612,10 @@
   stepHost.addEventListener("change", async (e) => {
     const key = steps()[S.step], f = e.target;
     if (key === "person") { if (f.id === "birthDate") updateAge(true); readPerson(); saveDraft(); return; }
+    if (key === "path" && f.name === "kind" && f.value === "general") { autoNext(); return; }
     if (key === "path" && f.name === "programId") {
       const pr = programs.find((x) => x.id === f.value);
+      autoNext(900);
       if (pr && pr.hours) topToast(`${T.arCount(Number(pr.hours), T.W_HOUR)} تطوعية في رصيدك`, `بنهاية «${esc(pr.name)}» تحصل عليها، شكرا لعطائك`, 4200, "hour");
       return;
     }
