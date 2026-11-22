@@ -51,12 +51,17 @@
   function enter(code) {
     st.code = code; ss.set(code);
     $("#accessCode").value = "";
-    $("#roleChip").textContent = st.name;
+    showName();
     st.tab = "fresh";
     show("screenAdmin");
     load();
     clearInterval(st.timer);
     st.timer = setInterval(() => { if (!document.hidden && !busyEditing()) load(true); }, 60000);
+  }
+  // اسم المشرف: في الشريط العلوي (يختفي في الجوال لضيق المكان) وفي رأس اللوحة (يظهر دائما)
+  function showName() {
+    $("#roleChip").textContent = st.name;
+    $("#admEyebrow").textContent = st.name ? "لوحة المشرفين · " + st.name : "لوحة المشرفين";
   }
   function logout(msg) {
     clearInterval(st.timer);
@@ -85,7 +90,7 @@
     const before = st.fresh.length;
     st.fresh = r.fresh || [];
     st.done = r.done || [];
-    if (r.name) { st.name = r.name; $("#roleChip").textContent = r.name; }
+    if (r.name) { st.name = r.name; showName(); }
     $("#syncNote").textContent = "آخر تحديث: " + new Date().toLocaleTimeString("ar-SA-u-nu-arab", { hour: "numeric", minute: "2-digit" });
     counts();
     render();
