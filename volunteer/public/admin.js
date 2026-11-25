@@ -3,7 +3,7 @@
   "use strict";
   const K = GherasKit, $ = K.$, $$ = K.$$, T = TG, esc = T.esc, toAr = T.toAr, S_ = T.STATUS;
   const SK = "tg-admin";
-  let CODE = "";
+  let CODE = "", ROLE = "admin";
   let D = { programs: [], supervisors: [], settings: {}, regs: [] };
   let tab = "regs";
   const F = { status: "", q: "", program: "", nat: "" };
@@ -13,11 +13,13 @@
     doc: '<svg viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H7Z"/><path d="M14 3v5h5M10 13h6M10 17h6"/></svg>',
     down: '<svg viewBox="0 0 24 24"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M4 17v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1"/></svg>',
     ext: '<svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
-    plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>'
+    plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+    copy: '<svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>'
   };
   const tree = '<svg class="ss ss-large" viewBox="0 0 80 60"><path class="ground" d="M14 54h52"/><path class="trunk" d="M40 54V30M40 41l-7-6M40 37l6-5"/><g class="sway" style="transform-origin:40px 40px"><circle class="c-lime" cx="27" cy="26" r="11"/><circle class="c-teal" cx="53" cy="25" r="11"/><circle class="c-green" cx="40" cy="17" r="14"/></g></svg>';
   const sapling = '<svg class="ss ss-small" viewBox="0 0 80 60"><path class="ground" d="M22 52h36"/><g class="sway" style="transform-origin:40px 52px"><path class="trunk" d="M40 52V33"/><path class="leaf leaf-l" d="M40 38c-3-8-10-11-17-10 1 7 7 12 17 10Z"/><path class="leaf leaf-r" d="M40 33c2-9 9-13 17-12-1 8-7 13-17 12Z"/></g></svg>';
-  const TABS = [["regs", "العقود"], ["volunteers", "المتطوعون"], ["programs", "البرامج"], ["supervisors", "المشرفون"], ["settings", "الإعدادات"]];
+  const ADMIN_TABS = [["regs", "العقود"], ["volunteers", "المتطوعون"], ["programs", "البرامج"], ["platform", "منصة التطوع"], ["supervisors", "المشرفون"], ["settings", "الإعدادات"]];
+  let TABS = ADMIN_TABS;
   const QTYPES = [["text", "نص قصير"], ["long", "نص طويل"], ["number", "رقم"], ["choice", "اختيار واحد"], ["multi", "اختيار متعدد"], ["yesno", "نعم أو لا"], ["date", "تاريخ"], ["file", "رفع ملف"]];
   const call = (a, d) => T.call(a, Object.assign({ admin: CODE }, d || {}));
   const hero = (eb, h, lead, num) => `<div class="step-hero"><div><p class="eyebrow">${eb}</p><h1>${h}</h1><p class="lead">${lead}</p><nav class="tabs admin-tabs-m" role="tablist" aria-label="أقسام اللوحة">${tabsHtml()}</nav></div>${num != null ? `<div class="axis-num" aria-hidden="true">${toAr(num)}</div>` : ""}</div><div class="band" aria-hidden="true"></div>`;
@@ -28,13 +30,15 @@
   K.theme.init();
   if (!T.LIVE) $("#gateSub").innerHTML = 'العقود والبرامج والمشرفون والإعدادات<br><span class="mode-pill">وضع التجربة — الرمز 1234</span>';
   K.portalGate({
-    verify: async (code) => { try { await T.call("adminLogin", { admin: code }); return { ok: true }; } catch (e) { return { ok: false, error: e.message }; } },
+    verify: async (code) => { try { const r = await T.call("adminLogin", { admin: code }); ROLE = r.role || "admin"; return { ok: true }; } catch (e) { return { ok: false, error: e.message }; } },
     onEnter: async (code) => { CODE = code; try { sessionStorage.setItem(SK, code); } catch (e) {} await enter(); }
   });
   async function enter() {
     $("#screenGate").hidden = true; $("#screenApp").hidden = false; $("#topbar").hidden = false;
     document.body.classList.remove("stage-mode"); K.stage.stop();
     $("#view").innerHTML = '<div class="wrap step"><p class="empty" style="padding-top:80px">جار التحميل…</p></div>';
+    TABS = ROLE === "uploader" ? [["platform", "منصة التطوع"]] : ADMIN_TABS;
+    if (ROLE === "uploader") { go("platform"); return; }
     await reload(); go("regs");
   }
   async function reload() {
@@ -44,7 +48,7 @@
   function logout() { try { sessionStorage.removeItem(SK); } catch (e) {} location.reload(); }
   function go(t) {
     tab = t; $("#tabs").innerHTML = tabsHtml(); $("#dock").hidden = true;
-    ({ regs: viewRegs, volunteers: viewVolunteers, programs: viewPrograms, supervisors: viewSupervisors, settings: viewSettings })[t]();
+    ({ regs: viewRegs, volunteers: viewVolunteers, programs: viewPrograms, platform: viewPlatform, supervisors: viewSupervisors, settings: viewSettings })[t]();
     window.scrollTo(0, 0);
   }
   document.addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b) go(b.dataset.tab); });
@@ -80,6 +84,7 @@
         <span class="st" data-s="${esc(r.status)}">${esc(r.status)}</span></button>`).join("") : `<p class="empty">${D.regs.length ? "لا نتائج مطابقة" : "لا توجد تسجيلات بعد"}</p>`;
   }
 
+  function copyText(t, msg) { (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => K.toast(msg || "نُسخ")).catch(() => K.toast(t)); }
   // ——— النافذة ———
   function modal(title, body, actions, opts) {
     opts = opts || {};
@@ -106,13 +111,14 @@
     const ans = (p.questions || []).map((q) => { const v = (r.answers || {})[q.id]; return [esc(q.label), q.type === "file" ? (v ? `<button class="link-btn" type="button" data-file="${esc(q.id)}">${esc(v)}</button>` : "") : esc(Array.isArray(v) ? v.join("، ") : v || "—")]; });
     const docs = [];
     docs.push(`<button class="btn btn-line btn-sm btn-icon" type="button" data-file="draft">${ic.doc}الميثاق بتوقيع المتطوع</button>`);
-    if (r.hasEmployer) docs.push(`<button class="btn btn-line btn-sm btn-icon" type="button" data-file="employer">${ic.doc}وثيقة صاحب العمل</button>`);
+    if (r.hasEmployerFile) docs.push(`<button class="btn btn-line btn-sm btn-icon" type="button" data-file="employer">${ic.doc}وثيقة صاحب العمل</button>`);
     if (r.hasFinal) docs.push(`<button class="btn btn-ok btn-sm btn-icon" type="button" data-file="final">${ic.doc}إظهار الوثيقة المعتمدة</button>`);
     const notes = [];
     if (r.status === S_.CHANGES && r.note) notes.push(`<div class="note-box"><strong>ملاحظة التعديل المرسلة</strong>${esc(r.note)}</div>`);
     if (r.status === S_.REJECTED && r.reason) notes.push(`<div class="note-box bad"><strong>سبب الرفض</strong>${esc(r.reason)}</div>`);
     if (r.status === S_.APPROVED) notes.push(`<div class="note-box" style="border-color:var(--green)"><strong>اعتمده</strong>${esc(r.approvedBy)} — ${fmtDT(r.approvedAt)}</div>`);
-    if (r.employerRequired && !r.hasEmployer) notes.push(`<div class="note-box"><strong>صاحب العمل</strong>لم يرفع المتطوع وثيقة صاحب العمل بعد</div>`);
+    if (r.employerRequired && !r.hasEmployer) notes.push(`<div class="note-box"><strong>صاحب العمل</strong>لم يوقّع صاحب العمل بعد${r.employerPhone ? ` — جواله <bdi dir="ltr">${esc(r.employerPhone)}</bdi>` : ""}${r.employerLink ? `<div class="row-actions" style="margin-top:10px"><button class="btn btn-line btn-sm" type="button" id="copyEmpLink">نسخ رابط التوقيع</button><a class="btn btn-ok btn-sm" target="_blank" rel="noopener" href="https://wa.me/966${esc(String(r.employerPhone || "").replace(/^0/, ""))}?text=${encodeURIComponent("السلام عليكم، رابط التوقيع على ميثاق تطوع " + (per.name || r.name) + " لدى جمعية غراس لتنمية الطفل: " + r.employerLink)}">أرسله من واتسابك</a></div>` : ""}</div>`);
+    if (r.employerRequired && r.hasEmployer && r.employerSignedAt) notes.push(`<div class="note-box" style="border-color:var(--green)"><strong>صاحب العمل</strong>وقّع إلكترونيا — ${fmtDT(r.employerSignedAt)}</div>`);
     const body = notes.join("") +
       `<h3 class="sec-title">الوثائق</h3><div class="row-actions">${docs.join("")}</div>` +
       `<h3 class="sec-title">البرنامج</h3>${kv([["البرنامج", esc(r.programName)], ["رقم التسجيل", `<bdi dir="ltr">${esc(r.regId)}</bdi>`], ["تاريخ التسجيل", fmtDT(r.created)], ["توقيع صاحب العمل", r.employerRequired ? "مطلوب" : "غير مطلوب"]])}` +
@@ -124,8 +130,9 @@
     else if (r.status === S_.CHANGES) acts = `<span class="grow"></span><button class="btn btn-danger" type="button" id="aReject">رفض</button>`;
     modal(per.name || r.name, body, acts, { extra: `<span class="st" data-s="${esc(r.status)}">${esc(r.status)}</span>` });
     $("#modalBody").addEventListener("click", onFileClick);
+    if ($("#copyEmpLink")) $("#copyEmpLink").onclick = () => copyText(r.employerLink, "نُسخ رابط التوقيع");
     if ($("#aApprove")) $("#aApprove").onclick = () => openApprove();
-    if ($("#aChanges")) $("#aChanges").onclick = () => askText("طلب تعديل", "اكتب للمتطوع وش المطلوب تعديله. توصله الملاحظة على بريده مع رابط يرجّعه لتسجيله.", "مثال: صورة وثيقة صاحب العمل غير واضحة، ارفعها من جديد", "أرسل طلب التعديل", async (t) => { await call("requestChanges", { regId: r.regId, note: t }); return "أُرسل طلب التعديل"; });
+    if ($("#aChanges")) $("#aChanges").onclick = () => askText("طلب تعديل", "اكتب للمتطوع وش المطلوب تعديله. توصله الملاحظة على بريده مع رابط يرجّعه لتسجيله.", "مثال: رقم جوال صاحب العمل غير صحيح، عدّله وأعد الإرسال", "أرسل طلب التعديل", async (t) => { await call("requestChanges", { regId: r.regId, note: t }); return "أُرسل طلب التعديل"; });
     if ($("#aReject")) $("#aReject").onclick = () => askText("رفض التسجيل", "اكتب سبب الرفض. يوصل المتطوع إيميل اعتذار فيه السبب.", "سبب الرفض", "تأكيد الرفض", async (t) => { await call("reject", { regId: r.regId, reason: t }); return "رُفض التسجيل وأُبلغ المتطوع"; }, true);
   }
   function onFileClick(e) {
@@ -239,17 +246,28 @@
   // ===================== البرامج =====================
   function viewPrograms() {
     const list = D.programs.slice().sort((a, b) => (a.kind === "general" ? -1 : b.kind === "general" ? 1 : (a.order || 0) - (b.order || 0)));
-    const card = (p) => `<button class="pa-card" type="button" data-prog="${esc(p.id)}" style="${p.state === "مؤرشف" ? "opacity:.55" : ""}"><span class="prog-img" aria-hidden="true">${p.image ? `<img src="${esc(p.image)}" alt="">` : p.kind === "general" ? sapling : tree}</span><span><h4>${esc(p.name)}</h4><span class="chips"><span class="chip" style="${p.state === "مفتوح" ? "background:rgba(108,189,83,.16)" : ""}">${esc(p.state)}</span><span class="chip">${toAr(p.used || 0)} مسجل${p.seats ? " من " + toAr(p.seats) : ""}</span>${p.employerSig ? '<span class="chip">صاحب العمل</span>' : ""}${p.templateName ? "" : '<span class="chip warn">بلا قالب خاص</span>'}</span></span></button>`;
+    const card = (p) => `<button class="pa-card" type="button" data-prog="${esc(p.id)}" style="${p.state === "مؤرشف" ? "opacity:.55" : ""}"><span class="prog-img" aria-hidden="true">${p.image ? `<img src="${esc(p.image)}" alt="">` : p.kind === "general" ? sapling : tree}</span><span><h4>${esc(p.name)}</h4><span class="chips"><span class="chip" style="${p.state === "مفتوح" ? "background:rgba(108,189,83,.16)" : ""}">${esc(p.state)}</span><span class="chip">${toAr(p.used || 0)} مسجل${p.seats ? " من " + toAr(p.seats) : ""}</span>${p.employerSig ? '<span class="chip">صاحب العمل</span>' : ""}${p.templateName ? "" : '<span class="chip warn">بلا قالب خاص</span>'}${overChip(p)}</span></span></button>`;
     $("#view").innerHTML = `<div class="wrap step">${hero("لوحة الإدارة", "البرامج", "أضف البرامج بتفاصيلها وأسئلتها وقالب ميثاقها", D.programs.filter((p) => p.state === "مفتوح").length)}
       <div class="prog-admin">${list.map(card).join("")}<button class="pa-card pa-add" type="button" data-prog="">${ic.plus.replace("<svg", '<svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"')}إضافة برنامج</button></div></div>`;
     $("#view").onclick = (e) => { const b = e.target.closest("[data-prog]"); if (b) editProgram(b.dataset.prog); };
   }
 
+  const nPeriods = (n) => (n === 2 ? "فترتين" : toAr(n) + " فترات");
+  // شارة حمراء إذا تجاوز البرنامج الحد اليومي للمنصة
+  function overChip(p) {
+    const sp = T.splitPeriods(p);
+    let h = sp.over ? `<span class="chip over">تجاوز الحد اليومي — قُسّم إلى ${nPeriods(sp.n)}</span>` : "";
+    if (sp.monthOver) h += `<span class="chip over">تجاوز ${toAr(T.LIMITS.govMonth)} ساعة شهريا</span>`;
+    return h;
+  }
+  const PL_DEF = { mainField: "", subField: "", hourValue: "", coordinator: "", coordinatorPhone: "", orgBenefits: "", level: "عام", participation: "جماعي", urgent: false, publishNow: true, publishDate: "", remote: false,
+    volunteerType: "الكل", ageFrom: "", ageTo: "", disability: "مناسبة للجميع", disabilityTypes: "", tasks: "", languages: "العربية", interview: "لا", extraReqs: "", volBenefits: "", support: "", supervisor: "", waitlist: "", videoUrl: "", govPartner: false };
   let P = null, tplFile = null;
   function editProgram(id) {
     $("#view").onclick = null;
     const src = D.programs.find((p) => p.id === id);
     P = JSON.parse(JSON.stringify(src || { kind: "program", state: "مغلق", name: "", desc: "", image: "", location: "", startDate: "", endDate: "", days: [], timeFrom: "", timeTo: "", hours: "", seats: "", gender: "الكل", employerSig: false, extras: [], questions: [] }));
+    P.platform = Object.assign({}, PL_DEF, P.platform || {});
     tplFile = null;
     drawEditor();
     $("#dock").hidden = false; $("#dockCount").textContent = P.id ? "تعديل البرنامج" : "برنامج جديد";
@@ -265,6 +283,11 @@
     $("#view").innerHTML = `<div class="wrap step">
       <div class="step-hero"><div><p class="eyebrow">البرامج</p><h1>${P.id ? esc(P.name) : "برنامج جديد"}</h1><p class="lead">${g ? "إعدادات التطوع العام وأسئلته وميثاقه" : "كل ما يحتاجه المتطوع عن البرنامج، وما يظهر في ميثاقه"}</p></div></div>
       <div class="band" aria-hidden="true"></div>
+      ${g ? "" : `<div class="rules-box"><h3>قبل ما تنشئ البرنامج: شروط منصة العمل التطوعي</h3><ul>
+        <li>الحد الآمن <b>${toAr(T.LIMITS.day)} ساعات في اليوم</b> للفرصة، ولا تتقاطع مع فرص أخرى للجمعية في نفس الوقت حتى تقبلها المنصة.</li>
+        <li>إذا كانت الفرصة <b>بالشراكة مع جهة حكومية</b>: ${toAr(T.LIMITS.govDay)} ساعات في اليوم و${toAr(T.LIMITS.govMonth)} ساعة في الشهر للمتطوع.</li>
+        <li>إذا تجاوز وقت البرنامج الحد ولو بساعة، يُقسم تلقائيا في واجهة منصة التطوع إلى فترات (صباحي ومسائي، أو صباحي وظهري ومسائي) بنفس التواريخ.</li>
+        <li>عبّ قسم «بيانات منصة العمل التطوعي» كاملا، فهو ما ينسخه موظف الرفع إلى المنصة.</li></ul></div>`}
       <div class="card"><h2 class="card-title">الأساسيات</h2><div class="grid">
         ${fld("pName", "اسم البرنامج", inp("pName", P.name))}
         ${fld("pDesc", "وصف مختصر", `<textarea class="textarea" id="pDesc">${esc(P.desc)}</textarea>`)}
@@ -278,13 +301,16 @@
         <div class="grid grid-2">${fld("pFrom", "الوقت من", inp("pFrom", P.timeFrom, 'type="time"'))}${fld("pTo", "إلى", inp("pTo", P.timeTo, 'type="time"'))}</div>
         <div class="grid grid-2">${fld("pHours", "عدد الساعات التطوعية", inp("pHours", P.hours, 'inputmode="numeric" dir="ltr"'))}${fld("pSeats", "عدد المقاعد", inp("pSeats", P.seats, 'inputmode="numeric" dir="ltr"'), "اتركه فارغا إذا ما فيه حد. يقفل التسجيل تلقائيا إذا اكتمل.")}</div>
         <div class="field"><span class="field-label">الفئة</span>${segH("pGender", ["الكل", "رجال", "نساء"], P.gender)}</div>
+        ${g ? "" : `<label class="toggle"><span class="t">بالشراكة مع جهة حكومية<small>الحد يصير ${toAr(T.LIMITS.govDay)} ساعات يوميا و${toAr(T.LIMITS.govMonth)} ساعة شهريا</small></span><input type="checkbox" id="plGov" ${P.platform.govPartner ? "checked" : ""}><span class="sw" aria-hidden="true"></span></label>
+        <div id="pSplit"></div>`}
       </div></div>
+      ${g ? "" : platformCard()}
       <div class="card"><h2 class="card-title">تفاصيل إضافية</h2><p class="hint" style="margin:-10px 0 14px">أي بند تبيه يظهر للمتطوع، مثل المهام أو المتطلبات أو الزي. ويصير له مكان في الميثاق باسمه.</p>
         <div class="rep" id="exList"></div><button class="btn btn-line btn-sm btn-icon" type="button" id="exAdd" style="margin-top:12px">${ic.plus}إضافة بند</button></div>
       <div class="card"><h2 class="card-title">أسئلة التسجيل</h2><p class="hint" style="margin:-10px 0 14px">تظهر للمتطوع بعد ما يختار ${g ? "التطوع العام" : "البرنامج"}، وكل جواب له عمود في ورقة البرنامج.</p>
         <div class="rep" id="qList"></div><button class="btn btn-line btn-sm btn-icon" type="button" id="qAdd" style="margin-top:12px">${ic.plus}إضافة سؤال</button></div>
       <div class="card"><h2 class="card-title">الميثاق</h2><div class="grid">
-        <label class="toggle"><span class="t">توقيع صاحب العمل لغير السعوديين<small>غير السعودي ينزّل الميثاق ويوقعه صاحب العمل ويختمه ثم يرفعه</small></span><input type="checkbox" id="pEmp" ${P.employerSig ? "checked" : ""}><span class="sw" aria-hidden="true"></span></label>
+        <label class="toggle"><span class="t">توقيع صاحب العمل لغير السعوديين<small>غير السعودي يكتب جوال صاحب العمل، ويوصله رابط على الواتساب يوقّع منه إلكترونيا</small></span><input type="checkbox" id="pEmp" ${P.employerSig ? "checked" : ""}><span class="sw" aria-hidden="true"></span></label>
         <div class="field"><span class="field-label">قالب الميثاق</span>
           <p class="hint" style="margin-bottom:6px">${P.templateName ? `القالب الحالي: <strong style="font-weight:500;color:var(--ink)">${esc(P.templateName)}</strong>` : "لا يوجد قالب خاص، يُستخدم القالب الافتراضي."}</p>
           <label class="drop"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4m0 0-4.5 4.5M12 4l4.5 4.5M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg><span id="tplName">ارفع ملف Word (.docx) ${P.templateName ? "لاستبداله" : ""}</span><input type="file" id="pTpl" hidden accept=".docx,.doc,.odt,.rtf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword"></label>
@@ -293,7 +319,11 @@
         <div><p class="field-label" style="margin:0 0 8px">الأماكن اللي تكتبها في القالب <small class="hint" style="display:inline">اضغط للنسخ</small></p>${phChips()}</div>
         ${P.id ? '<div><button class="btn btn-line btn-icon" type="button" id="tplPrev">' + ic.doc + "معاينة الميثاق ببيانات تجريبية</button></div>" : ""}
       </div></div></div>`;
-    drawExtras(); drawQs();
+    drawExtras(); drawQs(); drawSplit();
+    ["pFrom", "pTo", "pHours", "pSeats", "pStart", "pEnd"].forEach((id) => $("#" + id) && $("#" + id).addEventListener("input", () => { readEditor(); drawSplit(); }));
+    $$('input[name="pDays"]').forEach((i) => i.addEventListener("change", () => { readEditor(); drawSplit(); }));
+    if ($("#plGov")) $("#plGov").onchange = () => { readEditor(); drawSplit(); };
+    if ($("#plMain")) $("#plMain").onchange = () => { readEditor(); P.platform.subField = ""; $("#plSub").innerHTML = subOpts(); };
     $("#pImg").onchange = async (e) => { const f = e.target.files[0]; if (!f) return; P.image = await T.compressImage(f, 640, 0.8, 45000); readEditor(); drawEditor(); };
     if ($("#pImgRm")) $("#pImgRm").onclick = () => { readEditor(); P.image = ""; drawEditor(); };
     $("#exAdd").onclick = () => { readEditor(); P.extras.push({ k: "", v: "" }); drawExtras(); $$("#exList .rep-item:last-child input")[0].focus(); };
@@ -306,6 +336,50 @@
     };
     $$("#view .ph").forEach((b) => b.onclick = () => { const t = b.textContent; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => K.toast("نُسخ " + t)).catch(() => K.toast(t)); });
     K.bindChoices($("#view"));
+  }
+  function drawSplit() {
+    const box = $("#pSplit"); if (!box) return;
+    const sp = T.splitPeriods(P);
+    if (!sp.daily) { box.innerHTML = `<p class="hint">حدد الوقت من وإلى، ونتحقق من حد المنصة اليومي (${toAr(sp.limit)} ساعات).</p>`; return; }
+    const hrs = (n) => toAr(Math.round(n * 10) / 10);
+    let h = sp.over
+      ? `<div class="split-alert"><strong>الوقت اليومي ${hrs(sp.daily)} ساعات، يتجاوز حد المنصة (${toAr(sp.limit)} ساعات)</strong><span>يُقسم تلقائيا في واجهة منصة التطوع إلى ${nPeriods(sp.n)}:</span><ul>${sp.periods.map((x) => `<li>${x.name}: ${T.programTime({ timeFrom: x.from, timeTo: x.to })} (${hrs(x.daily)} ساعات يوميا)</li>`).join("")}</ul></div>`
+      : `<p class="hint" style="color:var(--green)">الوقت اليومي ${hrs(sp.daily)} ساعات، ضمن حد المنصة (${toAr(sp.limit)} ساعات).</p>`;
+    if (sp.monthOver) h += `<div class="split-alert"><strong>تجاوز الحد الشهري للشراكة الحكومية</strong><span>أكثر شهر فيه ${hrs(sp.monthMax)} ساعة للمتطوع، والحد ${toAr(T.LIMITS.govMonth)} ساعة. قلّل الأيام أو قسّم البرنامج.</span></div>`;
+    box.innerHTML = h;
+  }
+  const subOpts = () => `<option value="">اختر</option>` + ((T.FIELDS[P.platform.mainField] || []).map((x) => `<option ${P.platform.subField === x ? "selected" : ""}>${esc(x)}</option>`).join(""));
+  function platformCard() {
+    const L = P.platform, O = T.PLATFORM_OPTS;
+    const sel = (id, opts, v) => `<select class="select" id="${id}"><option value="">اختر</option>${opts.map((o) => `<option ${v === o ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
+    const ta = (id, v, ph) => `<textarea class="textarea" id="${id}" placeholder="${esc(ph || "")}">${esc(v)}</textarea>`;
+    const yn = (id, label, v, hint) => `<label class="toggle"><span class="t">${label}${hint ? `<small>${hint}</small>` : ""}</span><input type="checkbox" id="${id}" ${v ? "checked" : ""}><span class="sw" aria-hidden="true"></span></label>`;
+    return `<div class="card"><h2 class="card-title">بيانات منصة العمل التطوعي</h2><p class="hint" style="margin:-10px 0 14px">نفس حقول نموذج «إنشاء فرصة تطوعية» في المنصة. الاسم والوصف والمواعيد والمقاعد والفئة تؤخذ من أعلاه.</p><div class="grid">
+      <h3 class="sec-title">معلومات الفرصة</h3>
+      <div class="grid grid-2">${fld("plMain", "مجال التطوع الرئيسي", sel("plMain", Object.keys(T.FIELDS), L.mainField))}${fld("plSub", "مجال التطوع الفرعي", `<select class="select" id="plSub">${subOpts()}</select>`)}</div>
+      <div class="grid grid-3">${fld("plValue", "القيمة التقديرية لكل ساعة (ريال)", inp("plValue", L.hourValue, 'inputmode="numeric" dir="ltr"'), "لقياس الأثر الاقتصادي، وليست مبلغا يُدفع للمتطوع")}${fld("plCoord", "المنسق", inp("plCoord", L.coordinator))}${fld("plCoordPh", "جوال المنسق", inp("plCoordPh", L.coordinatorPhone, 'inputmode="tel" dir="ltr"'))}</div>
+      ${fld("plOrgB", "الفوائد العائدة على الجهة", ta("plOrgB", L.orgBenefits))}
+      <h3 class="sec-title">خصائص الفرصة</h3>
+      <div class="grid grid-2">${fld("plLevel", "مستوى التطوع", sel("plLevel", O.level, L.level), "عام: بلا خبرة — مهاري: مهارات محددة — احترافي: خبرات أو مؤهلات متقدمة")}${fld("plPart", "نوع المشاركة", sel("plPart", O.participation, L.participation))}</div>
+      ${yn("plUrgent", "الفرصة عاجلة", L.urgent, "تحتاج متطوعين بشكل عاجل وسريع")}
+      ${yn("plRemote", "الفرصة متاحة عن بعد", L.remote, "إذا كانت تتطلب الحضور اتركه مغلقا، ويُستخدم المكان أعلاه")}
+      ${yn("plPubNow", "النشر في المنصة مباشرة بعد قبولها", L.publishNow)}
+      ${fld("plPubDate", "تاريخ النشر (إذا لم يكن مباشرة)", inp("plPubDate", L.publishDate, 'type="date"'))}
+      <h3 class="sec-title">خصائص المتطوع المستهدف</h3>
+      <div class="grid grid-3">${fld("plVType", "نوع المتطوعين", sel("plVType", O.volunteerType, L.volunteerType))}${fld("plAgeFrom", "العمر من", inp("plAgeFrom", L.ageFrom, 'inputmode="numeric" dir="ltr"'))}${fld("plAgeTo", "العمر إلى", inp("plAgeTo", L.ageTo, 'inputmode="numeric" dir="ltr"'))}</div>
+      <div class="grid grid-2">${fld("plDis", "مناسبة لذوي الإعاقة", sel("plDis", O.disability, L.disability))}${fld("plDisT", "أنواع الإعاقة المسموحة (إذا لبعضهم)", inp("plDisT", L.disabilityTypes))}</div>
+      <h3 class="sec-title">المؤهلات والمتطلبات</h3>
+      ${fld("plTasks", "مهام المتطوع", ta("plTasks", L.tasks, "الأعمال والمسؤوليات التي سيقوم بها المتطوع"))}
+      <div class="grid grid-2">${fld("plLang", "اللغة المطلوبة", inp("plLang", L.languages))}${fld("plInt", "مقابلة شخصية", sel("plInt", O.interview, L.interview))}</div>
+      ${fld("plReq", "متطلبات إضافية من المتطوع", ta("plReq", L.extraReqs))}
+      <h3 class="sec-title">محتوى الفرصة والدعم</h3>
+      ${fld("plVolB", "الفوائد العائدة على المتطوع", ta("plVolB", L.volBenefits))}
+      ${fld("plSupport", "الدعم المقدم من الجهة للمتطوع", ta("plSupport", L.support))}
+      <h3 class="sec-title">الفترة</h3>
+      <div class="grid grid-2">${fld("plSup", "مشرف الفترة", inp("plSup", L.supervisor))}${fld("plWait", "عدد مقاعد قائمة الانتظار", inp("plWait", L.waitlist, 'inputmode="numeric" dir="ltr"'))}</div>
+      <h3 class="sec-title">المرفقات</h3>
+      ${fld("plVideo", "رابط الفيديو", inp("plVideo", L.videoUrl, 'dir="ltr" placeholder="https://"'))}
+    </div></div>`;
   }
   function phChips() {
     const groups = T.PLACEHOLDERS.slice();
@@ -337,6 +411,16 @@
       days: T.DAYS.filter((d) => $$('input[name="pDays"]:checked').some((i) => i.value === d)),
       employerSig: !!($("#pEmp") && $("#pEmp").checked)
     });
+    if (P.platform && $("#plMain")) {
+      const num = (id) => T.toEn(v(id)).replace(/[^\d.]/g, ""), chk = (id) => !!($("#" + id) && $("#" + id).checked);
+      Object.assign(P.platform, {
+        mainField: v("plMain"), subField: v("plSub"), hourValue: num("plValue"), coordinator: v("plCoord"), coordinatorPhone: T.toEn(v("plCoordPh")), orgBenefits: v("plOrgB"),
+        level: v("plLevel"), participation: v("plPart"), urgent: chk("plUrgent"), remote: chk("plRemote"), publishNow: chk("plPubNow"), publishDate: v("plPubDate"),
+        volunteerType: v("plVType"), ageFrom: num("plAgeFrom"), ageTo: num("plAgeTo"), disability: v("plDis"), disabilityTypes: v("plDisT"),
+        tasks: v("plTasks"), languages: v("plLang"), interview: v("plInt"), extraReqs: v("plReq"), volBenefits: v("plVolB"), support: v("plSupport"),
+        supervisor: v("plSup"), waitlist: num("plWait"), videoUrl: v("plVideo"), govPartner: chk("plGov")
+      });
+    }
     $$("[data-ex]").forEach((el) => { P.extras[+el.dataset.i][el.dataset.ex] = el.value.trim(); });
     $$("[data-q]").forEach((el) => {
       const q = P.questions[+el.dataset.i], k = el.dataset.q;
@@ -357,7 +441,9 @@
       const out = Object.assign({}, P); delete out.seatsLeft; delete out.used;
       const r = await call("saveProgram", { program: out, template: tplFile, templateLink: link.trim() });
       await reload();
-      K.toast(tplFile || link ? "حُفظ البرنامج ورُفع القالب" : "حُفظ البرنامج");
+      const sp = T.splitPeriods(P);
+      if (sp.over) K.toast(`حُفظ البرنامج. تنبيه: تجاوز الحد اليومي (${toAr(sp.limit)} ساعات)، فقُسّم في منصة التطوع إلى ${nPeriods(sp.n)}: ${sp.periods.map((x) => x.name).join("، ")}`, 6500);
+      else K.toast(tplFile || link ? "حُفظ البرنامج ورُفع القالب" : "حُفظ البرنامج");
       editProgram(r.id);
     } catch (e) { K.toast(e.message, 4200); }
     finally { b.disabled = false; b.textContent = "حفظ"; }
@@ -498,6 +584,64 @@
     };
   }
 
+  // ===================== منصة التطوع (واجهة موظف الرفع) =====================
+  let PL = null;
+  const yesNo = (b) => (b ? "نعم" : "لا");
+  async function viewPlatform() {
+    const lead = "بيانات كل فرصة مرتبة بنفس نموذج منصة العمل التطوعي، وبجنب كل حقل زر نسخ";
+    $("#view").innerHTML = `<div class="wrap step">${hero(ROLE === "uploader" ? "منصة التطوع" : "لوحة الإدارة", "منصة التطوع", lead)}<p class="empty">جار التحميل…</p></div>`;
+    try { PL = await call("platformLoad"); } catch (e) { K.toast(e.message); if (/رمز/.test(e.message)) logout(); return; }
+    if (tab !== "platform") return;
+    const list = (PL.programs || []).filter((p) => p.state !== "مؤرشف").sort((a, b) => (a.order || 0) - (b.order || 0));
+    const cnt = (id) => (PL.regs || []).filter((r) => r.programId === id).length;
+    $("#view").innerHTML = `<div class="wrap step">${hero(ROLE === "uploader" ? "منصة التطوع" : "لوحة الإدارة", "منصة التطوع", lead, list.length)}
+      <div class="prog-admin">${list.map((p) => `<button class="pa-card" type="button" data-pl="${esc(p.id)}"><span class="prog-img" aria-hidden="true">${p.image ? `<img src="${esc(p.image)}" alt="">` : tree}</span><span><h4>${esc(p.name)}</h4><span class="chips"><span class="chip">${esc(p.state)}</span><span class="chip">${toAr(cnt(p.id))} متطوع معتمد</span>${(p.platform || {}).mainField ? "" : '<span class="chip warn">بيانات المنصة ناقصة</span>'}${overChip(p)}</span></span></button>`).join("") || '<p class="empty">لا توجد برامج</p>'}</div>
+      ${ROLE === "uploader" ? '<div class="row-actions" style="margin-top:22px"><span style="flex:1"></span><button class="btn btn-ghost" type="button" id="plOut">تسجيل الخروج</button></div>' : ""}</div>`;
+    $("#view").onclick = (e) => { const b = e.target.closest("[data-pl]"); if (b) platformDetail(b.dataset.pl); };
+    if ($("#plOut")) $("#plOut").onclick = logout;
+  }
+  function platformDetail(id) {
+    $("#view").onclick = null;
+    const p = PL.programs.find((x) => x.id === id); if (!p) return;
+    const L = Object.assign({}, PL_DEF, p.platform || {}), sp = T.splitPeriods(p);
+    const regs = (PL.regs || []).filter((r) => r.programId === id).sort((a, b) => String(a.approvedAt).localeCompare(String(b.approvedAt)));
+    const genderTxt = { "الكل": "الجنسين", "رجال": "ذكور", "نساء": "إناث" }[p.gender] || p.gender;
+    const period = (x) => `من ${T.fmtDate(p.startDate) || "—"} إلى ${T.fmtDate(p.endDate) || "—"}${(p.days || []).length ? "، " + p.days.join("، ") : ""}، ${T.programTime({ timeFrom: x.from || p.timeFrom, timeTo: x.to || p.timeTo })}`;
+    const sec = (title, rows) => `<div class="card"><h2 class="card-title">${title}</h2><div class="cp-list">${rows.map(([k, v]) => { const t = String(v == null ? "" : v).trim(); return `<div class="cp-row"><span class="cp-k">${k}</span><span class="cp-v ${t ? "" : "cp-none"}">${t ? esc(t) : "لم يُعبأ"}</span>${t ? `<button class="icon-btn cp-btn" type="button" data-copy="${esc(t)}" aria-label="نسخ ${esc(k)}">${ic.copy}</button>` : "<span></span>"}</div>`; }).join("")}</div></div>`;
+    const periods = (sp.periods.length ? sp.periods : [{ name: "", from: p.timeFrom, to: p.timeTo, hours: Number(p.hours) || 0, seats: Number(p.seats) || 0 }]);
+    const assign = (i) => periods[periods.length > 1 ? i % periods.length : 0];
+    $("#view").innerHTML = `<div class="wrap step">
+      <div class="step-hero"><div><p class="eyebrow">منصة التطوع</p><h1>${esc(p.name)}</h1><p class="lead">انسخ كل حقل وضعه في نموذج «إنشاء فرصة تطوعية» بنفس الترتيب</p></div></div>
+      <div class="band" aria-hidden="true"></div>
+      ${sp.over ? `<div class="split-alert"><strong>تجاوز الحد اليومي: ${toAr(Math.round(sp.daily * 10) / 10)} ساعات، والحد ${toAr(sp.limit)} ساعات${sp.gov ? " (شراكة حكومية)" : ""}</strong><span>قُسّم البرنامج إلى ${nPeriods(sp.n)} بنفس التواريخ. أضف كل فترة في المنصة كفترة مستقلة، ووزّع المتطوعين عليها كما في الجدول أدناه.</span></div>` : ""}
+      ${sp.monthOver ? `<div class="split-alert"><strong>تجاوز الحد الشهري للشراكة الحكومية</strong><span>أكثر شهر فيه ${toAr(sp.monthMax)} ساعة للمتطوع، والحد ${toAr(T.LIMITS.govMonth)} ساعة.</span></div>` : ""}
+      ${sec("معلومات الفرصة", [["مسمى الفرصة", p.name], ["وصف الفرصة", p.desc], ["مجال التطوع الرئيسي", L.mainField], ["مجال التطوع الفرعي", L.subField], ["القيمة التقديرية لكل ساعة", L.hourValue], ["منسق", [L.coordinator, L.coordinatorPhone].filter(Boolean).join(" — ")], ["الفوائد العائدة على الجهة", L.orgBenefits]])}
+      ${sec("خصائص الفرصة", [["مستوى التطوع", L.level], ["نوع المشاركة", L.participation], ["هل تعتبر الفرصة عاجلة", yesNo(L.urgent)], ["النشر على المنصة مباشرة بعد قبولها", L.publishNow ? "نعم، أرغب في النشر مباشرة" : "لا، أرغب في النشر في وقت آخر" + (L.publishDate ? " — " + T.fmtDate(L.publishDate) : "")], ["هل الفرصة متاحة عن بعد", L.remote ? "نعم، الفرصة عن بعد" : "لا، الفرصة تتطلب الحضور"], ["موقع التنفيذ", L.remote ? "" : p.location]])}
+      ${sec("خصائص المتطوع المستهدف", [["نوع المتطوعين", L.volunteerType], ["الفئة العمرية", L.ageFrom || L.ageTo ? `من ${L.ageFrom || "—"} إلى ${L.ageTo || "—"} سنة` : ""], ["الجنس", genderTxt], ["هل الفرصة مناسبة لذوي الإعاقة", L.disability + (L.disability === "مناسبة لبعض ذوي الإعاقة" && L.disabilityTypes ? ": " + L.disabilityTypes : "")]])}
+      ${sec("المؤهلات والمتطلبات", [["مهام المتطوع", L.tasks], ["اللغة المطلوبة", L.languages], ["هل تتطلب مقابلة شخصية", L.interview === "لا" || !L.interview ? "لا" : "نعم، " + L.interview], ["متطلبات إضافية من المتطوع", L.extraReqs]])}
+      ${sec("محتوى الفرصة والدعم", [["الفوائد العائدة على المتطوع", L.volBenefits], ["الدعم المقدم من الجهة للمتطوع", L.support]])}
+      ${periods.map((x, i) => sec(periods.length > 1 ? `الفترة ${toAr(i + 1)}: ${x.name}` : "الفترة", [["موعد الفترة", period(x)], ["عدد المتطوعين للفترة", x.seats || ""], ["مشرف الفترة", L.supervisor], ["عدد مقاعد قائمة الانتظار", L.waitlist], ["ساعات المتطوع في الفترة", x.hours || ""]])).join("")}
+      ${sec("المرفقات والمواد الداعمة", [["رابط الفيديو", L.videoUrl]])}
+      <div class="card"><h2 class="card-title">المتطوعون المعتمدون (${toAr(regs.length)})</h2>
+        ${regs.length ? `<div class="reg-list">${regs.map((r, i) => { const x = assign(i), v = r.person || {}; return `<div class="reg-row" style="cursor:default"><span><span class="nm">${esc(v.name)}</span><small><bdi dir="ltr">${esc(v.nationalId)}</bdi> — ${esc(T.nationalityText(v))}</small></span><span class="pg"><bdi dir="ltr">${esc(v.phone || "—")}</bdi></span><span class="dt"><small>${x.name ? esc(x.name) + " — " : ""}${toAr(x.hours || 0)} ساعة</small></span><button class="icon-btn cp-btn" type="button" data-copy="${esc(v.nationalId)}" aria-label="نسخ رقم الهوية">${ic.copy}</button></div>`; }).join("")}</div>
+          <div class="row-actions" style="margin-top:16px"><button class="btn btn-ok btn-icon" type="button" id="plXl">${ic.down}تنزيل ملف Excel للمتطوعين</button></div>` : '<p class="empty">لا يوجد متطوعون معتمدون في هذا البرنامج بعد</p>'}</div>
+      <div class="row-actions"><button class="btn btn-ghost" type="button" id="plBack">رجوع للبرامج</button></div></div>`;
+    window.scrollTo(0, 0);
+    $("#view").onclick = (e) => { const b = e.target.closest("[data-copy]"); if (b) copyText(b.dataset.copy, "نُسخ"); };
+    $("#plBack").onclick = viewPlatform;
+    if ($("#plXl")) $("#plXl").onclick = async () => {
+      const XLSX = await T.loadXlsx();
+      const head = PLATFORM.map((c) => c[0]).concat(periods.length > 1 ? ["الفترة"] : []);
+      const rows = regs.map((r, i) => {
+        const x = assign(i), v = r.person || {};
+        const val = { nationalId: v.nationalId, name: v.name, gender: v.gender, nationality: T.nationalityText(v), birthDate: v.birthDate, phone: v.phone, email: v.email, city: v.city, district: v.district,
+          qualification: v.qualification, major: v.major, employer: v.employer, jobTitle: v.jobTitle, program: p.name, hours: x.hours || "", startDate: p.startDate, endDate: p.endDate, approvedAt: String(r.approvedAt || "").slice(0, 10), regId: r.regId };
+        return PLATFORM.map(([, k]) => (val[k] == null ? "" : val[k])).concat(periods.length > 1 ? [x.name] : []);
+      });
+      saveBook(XLSX, [["المتطوعون", [head].concat(rows)]], `منصة التطوع - ${p.name} ${today()}.xlsx`);
+    };
+  }
+
   // ===================== المشرفون =====================
   function viewSupervisors(editId) {
     const s = D.supervisors.find((x) => x.id === editId) || null;
@@ -528,22 +672,40 @@
 
   // ===================== الإعدادات =====================
   function viewSettings() {
-    const st = D.settings || {};
+    const st = D.settings || {}, wa = st.wa || {};
     $("#view").innerHTML = `<div class="wrap step">${hero("لوحة الإدارة", "الإعدادات", "ختم الجمعية، وبريد التنبيهات، ورمز الدخول")}
       <div class="card"><h2 class="card-title">ختم الجمعية</h2><div class="img-pick"><span class="sig-thumb" id="stampBox" style="height:120px;min-width:120px">${st.stamp ? `<img src="${esc(st.stamp)}" alt="الختم" style="max-height:108px">` : st.hasStamp ? "<em>مرفوع</em>" : "<em>لم يُرفع</em>"}</span><div><label class="btn btn-line btn-sm">ارفع صورة الختم<input type="file" id="stampFile" accept="image/*" hidden></label><p class="hint" style="margin-top:8px">صورة واضحة للختم على خلفية بيضاء، ونشيل البياض تلقائيا.</p></div></div></div>
       <div class="card"><h2 class="card-title">بريد التنبيهات</h2>${fld("alertEmail", "يوصله تنبيه عند كل تسجيل جديد، ورفع وثيقة صاحب العمل، وإعادة الإرسال بعد التعديل", inp("alertEmail", st.alertEmail, 'type="email" dir="ltr"'))}</div>
+      <div class="card"><h2 class="card-title">رمز موظف منصة التطوع</h2><p class="hint" style="margin:-10px 0 14px">رمز مستقل يفتح تبويب «منصة التطوع» فقط، بدون العقود والاعتماد والإعدادات. ${st.hasUploader ? "الرمز مضبوط." : "لم يُضبط بعد."}</p>${fld("upCode", "الرمز الجديد", inp("upCode", "", 'type="password" autocomplete="new-password" dir="ltr"'), "٦ خانات على الأقل. اتركه فارغا لإبقاء الحالي.")}</div>
+      <div class="card"><h2 class="card-title">الواتساب (Kapso)</h2><p class="hint" style="margin:-10px 0 14px">يرسل رابط توقيع صاحب العمل تلقائيا من رقم الجمعية. ${wa.ready ? '<b style="color:var(--green);font-weight:500">مفعّل</b>' : '<b style="color:var(--danger);font-weight:500">غير مفعّل</b>'}</p><div class="grid">
+        <div class="grid grid-2">${fld("waPhoneId", "معرف رقم الواتساب (Phone Number ID)", inp("waPhoneId", wa.phoneNumberId, 'dir="ltr"'))}${fld("waKey", "مفتاح Kapso (API Key)", inp("waKey", "", 'type="password" autocomplete="new-password" dir="ltr" placeholder="' + (wa.hasKey ? "محفوظ، اكتب مفتاحا جديدا لاستبداله" : "") + '"'))}</div>
+        <div class="grid grid-2">${fld("waTpl", "اسم القالب المعتمد", inp("waTpl", wa.template || "employer_signature", 'dir="ltr"'))}${fld("waLang", "لغة القالب", inp("waLang", wa.lang || "ar", 'dir="ltr"'))}</div>
+        ${fld("waUrl", "عنوان الإرسال", inp("waUrl", wa.url || "", 'dir="ltr" placeholder="https://api.kapso.ai/meta/whatsapp/v24.0/{phone_number_id}/messages"'), "اتركه فارغا لاستخدام العنوان الافتراضي")}
+        <p class="hint">نص القالب: السلام عليكم، طلب منك {{1}} التوقيع على ميثاق التطوع في {{2}} لدى جمعية غراس لتنمية الطفل. للاطلاع والتوقيع: {{3}}</p>
+        ${wa.ready ? '<div class="row-actions"><input class="input" id="waTestTo" dir="ltr" inputmode="tel" maxlength="10" placeholder="05xxxxxxxx" style="max-width:200px"><button class="btn btn-line btn-sm" type="button" id="waTest">رسالة تجربة</button></div>' : ""}
+      </div></div>
       <div class="card"><h2 class="card-title">رمز دخول اللوحة</h2><div class="grid grid-2">${fld("nc1", "الرمز الجديد", inp("nc1", "", 'type="password" autocomplete="new-password" dir="ltr"'))}${fld("nc2", "أعد كتابته", inp("nc2", "", 'type="password" autocomplete="new-password" dir="ltr"'))}</div><p class="hint" style="margin-top:8px">اتركه فارغا إذا ما تبي تغيّره.</p></div>
       <div class="row-actions"><button class="btn btn-primary" type="button" id="setSave">حفظ الإعدادات</button><span style="flex:1"></span><button class="btn btn-ghost" type="button" id="logout">تسجيل الخروج</button></div></div>`;
     let stamp = "";
     $("#stampFile").onchange = async (e) => { const f = e.target.files[0]; if (!f) return; stamp = await T.transparentPng(f, 700); $("#stampBox").innerHTML = `<img src="${stamp}" alt="الختم" style="max-height:108px">`; };
     $("#logout").onclick = logout;
+    if ($("#waTest")) $("#waTest").onclick = async (e) => {
+      const to = T.toEn($("#waTestTo").value).replace(/\D/g, "");
+      if (!/^05\d{8}$/.test(to)) { K.toast("اكتب جوالا صحيحا"); return; }
+      e.target.disabled = true;
+      try { await call("testWhatsapp", { to }); K.toast("أُرسلت رسالة التجربة"); } catch (x) { K.toast(x.message, 6000); } finally { e.target.disabled = false; }
+    };
     $("#setSave").onclick = async (e) => {
-      const em = $("#alertEmail").value.trim(), a = $("#nc1").value.trim(), b = $("#nc2").value.trim();
+      const em = $("#alertEmail").value.trim(), a = $("#nc1").value.trim(), b = $("#nc2").value.trim(), up = $("#upCode").value.trim();
+      if (up && up.length < 6) { K.toast("رمز موظف المنصة ٦ خانات على الأقل"); return; }
+      if (up && up === a) { K.toast("رمز موظف المنصة لازم يختلف عن رمز الإدارة"); return; }
+      const waOut = { phoneNumberId: $("#waPhoneId").value.trim(), template: $("#waTpl").value.trim(), lang: $("#waLang").value.trim(), url: $("#waUrl").value.trim() };
+      if ($("#waKey").value.trim()) waOut.apiKey = $("#waKey").value.trim();
       if (em && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em)) { K.toast("البريد غير صحيح"); return; }
       if (a || b) { if (a !== b) { K.toast("الرمزان غير متطابقين"); return; } if (a.length < 6) { K.toast("رمز الدخول ٦ خانات على الأقل"); return; } }
       e.target.disabled = true;
       try {
-        await call("saveSettings", { alertEmail: em, stamp, newAdminCode: a });
+        await call("saveSettings", { alertEmail: em, stamp, newAdminCode: a, uploaderCode: up, wa: waOut });
         if (a) { CODE = a; try { sessionStorage.setItem(SK, a); } catch (x) {} }
         await reload(); viewSettings(); K.toast("حُفظت الإعدادات");
       } catch (x) { K.toast(x.message); e.target.disabled = false; }
@@ -553,7 +715,7 @@
   // دخول تلقائي داخل نفس الجلسة
   (async () => {
     let saved = ""; try { saved = sessionStorage.getItem(SK) || ""; } catch (e) {}
-    if (saved) { try { await T.call("adminLogin", { admin: saved }); CODE = saved; await enter(); return; } catch (e) {} }
+    if (saved) { try { const r = await T.call("adminLogin", { admin: saved }); ROLE = r.role || "admin"; CODE = saved; await enter(); return; } catch (e) {} }
     K.stage.start($("#screenGate"));
   })();
 })();

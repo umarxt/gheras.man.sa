@@ -7,7 +7,7 @@
 
   // ——— ثوابت مشتركة (يطابقها Code.gs) ———
   const STATUS = {
-    EMPLOYER: "بانتظار وثيقة صاحب العمل",
+    EMPLOYER: "بانتظار توقيع صاحب العمل",
     PENDING: "بانتظار الاعتماد",
     CHANGES: "مطلوب تعديل",
     APPROVED: "معتمد",
@@ -29,7 +29,7 @@
     { k: "employer", label: "جهة العمل", ph: "جهة_العمل" },
     { k: "jobTitle", label: "المسمى الوظيفي", ph: "المسمى_الوظيفي" }
   ];
-  const IMAGE_KEYS = ["توقيع_المتطوع", "الختم", "توقيع_المشرف"];
+  const IMAGE_KEYS = ["توقيع_المتطوع", "توقيع_صاحب_العمل", "الختم", "توقيع_المشرف"];
   const PLACEHOLDERS = [
     ["بيانات المتطوع", PERSON_FIELDS.map((f) => f.ph)],
     ["بيانات البرنامج", ["البرنامج", "المكان", "تاريخ_البداية", "تاريخ_النهاية", "الأيام", "الوقت", "الساعات"]],
@@ -37,6 +37,76 @@
     ["الاعتماد", ["اسم_المشرف", "صفة_المشرف", "تاريخ_الاعتماد"]],
     ["التواقيع (صور)", IMAGE_KEYS]
   ];
+
+  // ——— الجنسيات (أولها سعودي) ———
+  const NATIONALITIES = ["سعودي", "مصري", "يمني", "سوداني", "سوري", "أردني", "فلسطيني", "لبناني", "عراقي", "كويتي", "إماراتي", "قطري", "بحريني", "عماني",
+    "ليبي", "تونسي", "جزائري", "مغربي", "موريتاني", "صومالي", "جيبوتي", "جزر القمر", "إريتري", "إثيوبي", "كيني", "نيجيري", "تشادي", "مالي", "سنغالي", "غاني", "تنزاني", "أوغندي",
+    "باكستاني", "هندي", "بنغلاديشي", "سريلانكي", "نيبالي", "أفغاني", "إيراني", "تركي", "أذربيجاني", "أوزبكي", "كازاخستاني", "طاجيكي", "قرغيزي", "تركماني",
+    "إندونيسي", "ماليزي", "فلبيني", "تايلندي", "فيتنامي", "صيني", "ياباني", "كوري", "ميانماري", "بروناي", "سنغافوري",
+    "بريطاني", "أمريكي", "كندي", "أسترالي", "نيوزيلندي", "فرنسي", "ألماني", "إيطالي", "إسباني", "برتغالي", "هولندي", "بلجيكي", "سويسري", "سويدي", "نرويجي", "دنماركي", "فنلندي", "أيرلندي", "نمساوي", "يوناني", "بولندي", "روسي", "أوكراني", "روماني", "بوسني", "ألباني", "كوسوفي",
+    "برازيلي", "مكسيكي", "أرجنتيني", "جنوب أفريقي", "أخرى"];
+
+  // ——— منصة العمل التطوعي (دليل إنشاء الفرصة التطوعية — المركز الوطني لتنمية القطاع غير الربحي) ———
+  const FIELDS = {
+    "صحي": ["الصحة النفسية", "الصحة العامة", "التغذية", "التوعية الصحية", "دعم المرضى", "حملات التطعيم", "الإسعافات الأولية", "تأهيلي"],
+    "بيئي": ["ترشيد الاستهلاك الطاقة والمياه", "حفظ النعمة (تقليل هدر الطعام)", "تنسيق الحدائق", "التشجير والزراعة", "النظافة العامة", "تنظيف المتنزهات (البرية)", "تنظيف الشواطئ", "إدارة النفايات وإعادة التدوير", "حماية ورعاية الحيوانات والحياة الفطرية", "حماية الحياة البحرية", "التوعية البيئية"],
+    "قانوني": ["الاستشارات القانونية", "التوعية القانونية"],
+    "تعليمي": ["تربوي", "التدريب والتطوير", "التدريس والتعليم", "الأنشطة اللاصفية", "الإرشاد المهني"],
+    "ديني": ["تنظيم المصلين", "العناية بالمساجد والجوامع", "برامج رمضانية", "تحفيظ القرآن", "الدعوة والإرشاد", "تعليم العلوم الشرعية", "إكرام الموتى"],
+    "اجتماعي وإنساني": ["رعاية الأيتام", "رعاية المسنين", "رعاية المرضى", "التكافل والتنمية الاجتماعية", "رعاية ذوي الإعاقة", "سقيا الماء والضيافة"],
+    "ثقافي": ["الفنون والأدب", "التراث", "الشعر والأدب", "المتاحف والمعارض", "الفعاليات والاحتفالات الثقافية", "التوعية الثقافية", "المكتبات الثقافية", "المسرح"],
+    "فني وإبداعي": ["تصميم الهوية البصرية", "تصميم الشعارات", "تصميم الإعلانات", "تصميم المطبوعات", "تصميم التعبئة والتغليف", "تصميم الرسوم التوضيحية", "رسومات متحركة", "تصميم الوسائط والمنشورات", "تصميم العروض التقديمية", "التصميم الجرافيكي", "الرسم والتلوين", "الخط العربي", "الحرف اليدوية"],
+    "إعلامي": ["التواصل المؤسسي", "العلاقات العامة", "الإعلام", "إدارة وسائل التواصل الاجتماعي", "التصوير", "الإنتاج الفني", "إعداد المحتوى", "كتابة المحتوى", "المونتاج والإخراج", "التسويق الإعلامي", "التغطية الإعلامية"],
+    "رياضي": ["تنظيم الفعاليات الرياضية", "تدريب الناشئين", "تحكيم البطولات", "نشر ثقافة النشاط البدني", "مدرب"],
+    "سياحي": ["الإرشاد السياحي", "تنظيم الفعاليات السياحية", "الترجمة السياحية", "التوعية بالمواقع الأثرية"],
+    "ترفيهي": ["الأنشطة الترفيهية", "تنظيم الفعاليات والترفيهية"],
+    "تقنية المعلومات": ["بناء موقع إلكتروني", "بناء تطبيق", "تحليل بيانات", "إدارة البيانات", "الذكاء الاصطناعي", "البرمجة", "الأمن السيبراني", "تصميم واجهات المستخدم", "إدارة الأنظمة التقنية"],
+    "إداري": ["المالية", "المحاسبة", "التسويق", "الموارد البشرية", "التخطيط والاستراتيجية", "الشراكات", "تطوير الاعمال", "إدارة المشاريع", "الحوكمة", "إدارة التبرعات", "التواصل والتنسيق", "تنظيم الملفات", "إدخال البيانات", "إعداد التقارير", "اللوجستيات", "إدارة المخاطر", "المساعدة في الاعمال المكتبية"],
+    "الأمن والسلامة": ["السلامة المهنية", "السلامة العامة", "السلامة المرورية", "السلامة البيئية"],
+    "هندسي": ["هندسة مدنية", "هندسة معمارية", "هندسة كهربائية", "هندسة صناعية", "هندسة كيميائية"],
+    "التطوير العمراني": ["الترميم والصيانة", "تجهيز الوحدات السكنية", "تجميل وتخطيط المناطق الحضرية"],
+    "البحث العلمي والابتكار": ["البحث العلمي", "الدراسات الميدانية", "جمع البيانات البحثية", "الابتكار والتطوير", "التوثيق البحثي", "نشر الأبحاث"]
+  };
+  const PLATFORM_OPTS = {
+    level: ["عام", "مهاري", "احترافي"],
+    participation: ["فردي", "جماعي"],
+    volunteerType: ["الكل", "أفراد", "فرق تطوعية", "متطوعي الجهة", "متطوعي المدينة", "متطوعي المنطقة"],
+    disability: ["مناسبة للجميع", "غير مناسبة لذوي الإعاقة", "مناسبة لبعض ذوي الإعاقة"],
+    interview: ["لا", "حضورية", "عن بعد"]
+  };
+  // حدود المنصة: ٨ ساعات يوميا، و٥ ساعات يوميا و١٠٠ شهريا للفرص بالشراكة مع جهة حكومية
+  const LIMITS = { day: 8, govDay: 5, govMonth: 100 };
+  const toMin = (t) => { const m = String(t || "").match(/^(\d{1,2}):(\d{2})/); return m ? +m[1] * 60 + +m[2] : null; };
+  const fromMin = (n) => String(Math.floor(n / 60) % 24).padStart(2, "0") + ":" + String(n % 60).padStart(2, "0");
+  // تقسيم البرنامج إلى فترات بالوقت إذا تجاوز وقته اليومي الحد
+  function splitPeriods(p) {
+    p = p || {};
+    const pl = p.platform || {}, gov = !!pl.govPartner, limit = gov ? LIMITS.govDay : LIMITS.day;
+    const a = toMin(p.timeFrom), b = toMin(p.timeTo);
+    const out = { limit, gov, daily: 0, over: false, n: 1, periods: [], monthOver: false, monthMax: 0 };
+    if (a == null || b == null || b <= a) return out;
+    const mins = b - a;
+    out.daily = mins / 60;
+    out.n = Math.max(1, Math.ceil(mins / (limit * 60) - 1e-9));
+    out.over = out.n > 1;
+    const names = out.n === 2 ? ["صباحي", "مسائي"] : out.n === 3 ? ["صباحي", "ظهري", "مسائي"] : null;
+    const step = Math.round(mins / out.n / 15) * 15 || Math.round(mins / out.n);
+    const total = Number(p.hours) || 0, seats = Number(p.seats) || 0;
+    for (let i = 0; i < out.n; i++) {
+      const s = a + i * step, e = i === out.n - 1 ? b : a + (i + 1) * step;
+      out.periods.push({ name: out.n === 1 ? "" : names ? names[i] : "الفترة " + toAr(i + 1), from: fromMin(s), to: fromMin(e), daily: (e - s) / 60,
+        hours: total ? Math.round((total * (e - s)) / mins * 10) / 10 : 0, seats: seats ? Math.ceil(seats / out.n) : 0 });
+    }
+    // الحد الشهري للشراكة الحكومية: أكبر عدد أيام للبرنامج في شهر واحد × ساعات الفترة
+    if (gov && p.startDate && p.endDate && (p.days || []).length) {
+      const per = {}, d = new Date(p.startDate + "T00:00:00"), end = new Date(p.endDate + "T00:00:00");
+      for (let g = 0; d <= end && g < 800; g++, d.setDate(d.getDate() + 1)) if (p.days.includes(DAYS[d.getDay()])) { const k = d.getFullYear() + "-" + d.getMonth(); per[k] = (per[k] || 0) + 1; }
+      const maxDays = Math.max(0, ...Object.values(per));
+      out.monthMax = Math.round(maxDays * Math.max(...out.periods.map((x) => x.daily)) * 10) / 10;
+      out.monthOver = out.monthMax > LIMITS.govMonth;
+    }
+    return out;
+  }
 
   // ——— أدوات ———
   const toAr = (v) => String(v == null ? "" : v).replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[d]);
@@ -288,14 +358,14 @@
       { id: "q_prev", label: "هل لديك خبرات تطوعية سابقة؟", type: "yesno", required: true, options: [] },
       { id: "q_prevd", label: "تفاصيل الخبرات السابقة", type: "long", required: false, options: [] },
       { id: "q_days", label: "الأيام المتاحة", type: "multi", required: true, options: DAYS.slice() },
-      { id: "q_period", label: "الفترة المتاحة", type: "choice", required: true, options: ["صباحية", "مسائية", "مرنة"] },
-      { id: "q_hours", label: "عدد الساعات المتاحة أسبوعيا", type: "number", required: true, options: [] },
-      { id: "q_mode", label: "نوع التطوع المفضل", type: "choice", required: true, options: ["حضوري", "عن بعد", "الاثنين"] },
+      { id: "q_period", label: "الفترة المتاحة", type: "multi", required: true, options: ["صباحية", "مسائية"] },
+      { id: "q_hours", label: "عدد الساعات المتاحة في يوم التطوع", type: "number", required: true, options: [] },
+      { id: "q_mode", label: "نوع التطوع المفضل", type: "multi", required: true, options: ["حضوري", "عن بعد"] },
       { id: "q_add", label: "ماذا تستطيع أن تضيف للجمعية؟", type: "long", required: false, options: [] }
     ];
     function seed() {
       return {
-        adminCode: "1234",
+        adminCode: "1234", uploaderCode: "5678",
         settings: { alertEmail: "prog@gheras.sa", stamp: "" },
         supervisors: [{ id: "s1", name: "مشرف تجريبي", title: "مشرف البرامج", code: "1234", signature: "" }],
         programs: [
@@ -316,7 +386,8 @@
       const o = Object.assign({}, p); o.seatsLeft = p.seats ? Math.max(0, Number(p.seats) - used) : null; o.used = used;
       return o;
     };
-    const admin = (d, x) => { if (String(x.admin) !== String(d.adminCode)) fail("رمز الدخول غير صحيح"); };
+    const roleOf = (d, code) => (String(code) === String(d.adminCode) ? "admin" : d.uploaderCode && String(code) === String(d.uploaderCode) ? "uploader" : "");
+    const admin = (d, x) => { if (roleOf(d, x.admin) !== "admin") fail("رمز الدخول غير صحيح"); };
     const byToken = (d, t) => d.regs.find((r) => r.token === t) || fail("الرابط غير صحيح أو منتهي");
     const byId = (d, id) => d.regs.find((r) => r.regId === id) || fail("التسجيل غير موجود");
     const progOf = (d, id) => d.programs.find((p) => p.id === id) || {};
@@ -356,7 +427,7 @@
       }
       // خانات التوقيع
       y = Math.max(y + 30, H - 400);
-      const boxes = [["المتطوع", r.signature ? [r.signature] : []], ["صاحب العمل", []], ["الجمعية", appr ? [d.settings.stamp, appr.signature].filter(Boolean) : []]];
+      const boxes = [["المتطوع", r.signature ? [r.signature] : []], ["صاحب العمل", r.employerSig ? [r.employerSig] : []], ["الجمعية", appr ? [d.settings.stamp, appr.signature].filter(Boolean) : []]];
       const shown = r.employerRequired ? boxes : [boxes[0], boxes[2]];
       const bw = (W - 2 * M - (shown.length - 1) * 30) / shown.length;
       for (let i = 0; i < shown.length; i++) {
@@ -379,7 +450,7 @@
         case "lookupStart": {
           const v = d.volunteers[toEn(x.nationalId)];
           if (!v) return { ok: true, found: false };
-          return v.email ? { ok: true, found: true, method: "email", hint: maskEmail(v.email), demo: "1234" } : { ok: true, found: true, method: "phone", hint: maskPhone(v.phone) };
+          return { ok: true, found: true, person: v, vtoken: "demo-" + uid() };
         }
         case "lookupVerify": {
           const v = d.volunteers[toEn(x.nationalId)];
@@ -392,13 +463,35 @@
           const pp = pub(d, p); if (pp.seatsLeft === 0) fail("اكتملت المقاعد في هذا البرنامج");
           if (d.regs.some((r) => r.programId === p.id && r.person.nationalId === x.person.nationalId && r.status !== STATUS.REJECTED)) fail("سبق لك التسجيل في هذا البرنامج. افتح رابط المتابعة الذي وصلك بالبريد");
           const emp = !!p.employerSig && !isSaudi(x.person);
-          const r = { regId: "GV-" + (1001 + d.regs.length), token: uid(), created: now, updated: now, programId: p.id, programName: p.name, person: x.person, answers: x.answers || {}, files: x.files || {}, signature: x.signature, employerRequired: emp, employerFile: null, status: emp ? STATUS.EMPLOYER : STATUS.PENDING, note: "", reason: "", approvedBy: "", approvedAt: "", final: "" };
+          if (emp && !/^05\d{8}$/.test(x.employerPhone || "")) fail("اكتب جوال صاحب العمل");
+          const r = { regId: "GV-" + (1001 + d.regs.length), token: uid(), created: now, updated: now, programId: p.id, programName: p.name, person: x.person, answers: x.answers || {}, files: x.files || {}, signature: x.signature, employerRequired: emp, employerPhone: emp ? x.employerPhone : "", employerToken: emp ? uid() : "", employerSig: "", employerSignedAt: "", status: emp ? STATUS.EMPLOYER : STATUS.PENDING, note: "", reason: "", approvedBy: "", approvedAt: "", final: "" };
+          if (emp) console.info("وضع التجربة: رابط توقيع صاحب العمل", location.origin + location.pathname + "#e=" + r.employerToken);
           d.regs.push(r); d.volunteers[x.person.nationalId] = Object.assign({}, d.volunteers[x.person.nationalId] || {}, x.person); save(d);
-          return { ok: true, regId: r.regId, token: r.token, status: r.status };
+          return { ok: true, regId: r.regId, token: r.token, status: r.status, waSent: emp, demoLink: emp ? "#e=" + r.employerToken : "" };
+        }
+        case "employerView": {
+          const r = d.regs.find((q) => q.employerToken && q.employerToken === x.etoken) || fail("الرابط غير صحيح أو منتهي");
+          const p = progOf(d, r.programId);
+          return { ok: true, signed: !!r.employerSig, volunteer: r.person.name, person: r.person, program: pub(d, p), regId: r.regId };
+        }
+        case "employerSign": {
+          const r = d.regs.find((q) => q.employerToken && q.employerToken === x.etoken) || fail("الرابط غير صحيح أو منتهي");
+          if (r.employerSig) fail("سبق التوقيع على هذا الميثاق");
+          if (!x.signature) fail("التوقيع مطلوب");
+          r.employerSig = x.signature; r.employerSignedAt = now; if (r.status === STATUS.EMPLOYER) r.status = STATUS.PENDING; r.updated = now; save(d);
+          return { ok: true };
+        }
+        case "resendEmployer": {
+          const r = byToken(d, x.token);
+          if (r.status !== STATUS.EMPLOYER) fail("لا يمكن الإرسال في هذه المرحلة");
+          if (x.phone) { if (!/^05\d{8}$/.test(x.phone)) fail("رقم الجوال غير صحيح"); r.employerPhone = x.phone; }
+          r.employerToken = r.employerToken || uid(); save(d);
+          console.info("وضع التجربة: رابط توقيع صاحب العمل", location.origin + location.pathname + "#e=" + r.employerToken);
+          return { ok: true, waSent: true, employerPhone: maskPhone(r.employerPhone), demoLink: "#e=" + r.employerToken };
         }
         case "status": {
           const r = byToken(d, x.token), p = progOf(d, r.programId);
-          return { ok: true, reg: { regId: r.regId, created: r.created, status: r.status, programName: r.programName, programId: r.programId, employerRequired: r.employerRequired, hasEmployer: !!r.employerFile, note: r.note, reason: r.reason, approvedAt: r.approvedAt, person: r.person, answers: r.answers }, program: pub(d, p) };
+          return { ok: true, reg: { regId: r.regId, created: r.created, status: r.status, programName: r.programName, programId: r.programId, employerRequired: r.employerRequired, hasEmployer: !!(r.employerSig || r.employerFile), employerPhone: maskPhone(r.employerPhone), employerPhoneFull: r.status === STATUS.CHANGES ? r.employerPhone : "", employerSignedAt: r.employerSignedAt, note: r.note, reason: r.reason, approvedAt: r.approvedAt, person: r.person, answers: r.answers }, program: pub(d, p) };
         }
         case "doc": {
           const r = byToken(d, x.token);
@@ -418,19 +511,25 @@
           if (x.signature) r.signature = x.signature;
           if (x.employerFile) r.employerFile = x.employerFile;
           r.employerRequired = !!progOf(d, r.programId).employerSig && !isSaudi(r.person);
-          r.status = r.employerRequired && !r.employerFile ? STATUS.EMPLOYER : STATUS.PENDING; r.note = ""; r.updated = now;
+          if (r.employerRequired && !r.employerSig) { if (!/^05\d{8}$/.test(x.employerPhone || r.employerPhone || "")) fail("اكتب جوال صاحب العمل"); r.employerPhone = x.employerPhone || r.employerPhone; r.employerToken = r.employerToken || uid(); }
+          r.status = r.employerRequired && !r.employerSig && !r.employerFile ? STATUS.EMPLOYER : STATUS.PENDING; r.note = ""; r.updated = now;
           d.volunteers[r.person.nationalId] = r.person; save(d);
           return { ok: true, status: r.status };
         }
         case "resendLinks": return { ok: true };
         // ——— الإدارة ———
-        case "adminLogin": admin(d, x); return { ok: true };
+        case "adminLogin": { const role = roleOf(d, x.admin); if (!role) fail("رمز الدخول غير صحيح"); return { ok: true, role }; }
+        case "platformLoad": {
+          if (!roleOf(d, x.admin)) fail("رمز الدخول غير صحيح");
+          return { ok: true, programs: d.programs.filter((p) => p.kind !== "general").map((p) => pub(d, p)),
+            regs: d.regs.filter((r) => r.status === STATUS.APPROVED).map((r) => ({ regId: r.regId, programId: r.programId, approvedAt: r.approvedAt, person: Object.assign({}, d.volunteers[r.person.nationalId] || {}, r.person) })) };
+        }
         case "adminLoad":
           admin(d, x);
-          return { ok: true, programs: d.programs.map((p) => pub(d, p)), supervisors: d.supervisors.map((s) => ({ id: s.id, name: s.name, title: s.title, hasSignature: !!s.signature })), settings: { alertEmail: d.settings.alertEmail, stamp: d.settings.stamp }, regs: d.regs.map(light).reverse() };
+          return { ok: true, programs: d.programs.map((p) => pub(d, p)), supervisors: d.supervisors.map((s) => ({ id: s.id, name: s.name, title: s.title, hasSignature: !!s.signature })), settings: { alertEmail: d.settings.alertEmail, stamp: d.settings.stamp, hasUploader: !!d.uploaderCode, wa: d.settings.wa || {} }, regs: d.regs.map(light).reverse() };
         case "regDetail": {
           admin(d, x); const r = byId(d, x.regId);
-          return { ok: true, reg: Object.assign(light(r), { person: r.person, answers: r.answers, files: Object.keys(r.files || {}).map((k) => ({ key: k, name: r.files[k].name })), note: r.note, reason: r.reason, approvedBy: r.approvedBy, approvedAt: r.approvedAt, hasFinal: !!r.final, signature: r.signature }), program: pub(d, progOf(d, r.programId)) };
+          return { ok: true, reg: Object.assign(light(r), { person: r.person, answers: r.answers, files: Object.keys(r.files || {}).map((k) => ({ key: k, name: r.files[k].name })), note: r.note, reason: r.reason, approvedBy: r.approvedBy, approvedAt: r.approvedAt, hasFinal: !!r.final, signature: r.signature, employerPhone: r.employerPhone, employerSigned: !!r.employerSig, employerSignedAt: r.employerSignedAt, employerLink: r.employerToken && !r.employerSig ? location.origin + location.pathname.replace(/admin\.html$/, "index.html") + "#e=" + r.employerToken : "" }), program: pub(d, progOf(d, r.programId)) };
         }
         case "adminFile": {
           admin(d, x); const r = byId(d, x.regId);
@@ -451,6 +550,7 @@
           if (!s || String(s.code) !== String(x.code)) fail("رمز الاعتماد غير صحيح");
           if (r.status !== STATUS.PENDING) fail("هذا التسجيل ليس بانتظار الاعتماد");
           const appr = { name: s.name, title: s.title, signature: s.signature, date: now };
+          if (r.employerRequired && !r.employerSig && !r.employerFile) fail("لم يوقّع صاحب العمل بعد");
           if (r.employerFile && !x.merged) return { ok: true, needMerge: true, charter: await renderPdf(d, r, appr), employer: r.employerFile };
           r.final = x.merged || await renderPdf(d, r, appr);
           r.status = STATUS.APPROVED; r.approvedBy = s.name; r.approvedAt = now; r.updated = now; save(d);
@@ -483,6 +583,8 @@
           if (x.alertEmail != null) d.settings.alertEmail = x.alertEmail;
           if (x.stamp) d.settings.stamp = x.stamp;
           if (x.newAdminCode) d.adminCode = x.newAdminCode;
+          if (x.uploaderCode) d.uploaderCode = x.uploaderCode;
+          if (x.wa) d.settings.wa = Object.assign({}, d.settings.wa || {}, x.wa, { apiKey: x.wa.apiKey ? "•••" : (d.settings.wa || {}).apiKey });
           save(d); return { ok: true };
         }
         case "adminVolunteers": {
@@ -507,5 +609,5 @@
     return { handle, reset: () => localStorage.removeItem(KEY) };
   })();
 
-  window.TG = { ageParts, arCount, ageSentence, W_AM, W_HOUR, maskEmail, maskPhone, loadXlsx, IMPORT_COLUMNS, normalizeImported, isoDate, LIVE, STATUS, DAYS, PERSON_FIELDS, IMAGE_KEYS, PLACEHOLDERS, call, toAr, toEn, esc, fmtDate, fmtTime, programTime, nationalityText, isSaudi, placeholderMap, fillText, phKey, readAsDataURL, compressImage, transparentPng, packFile, b64ToBlob, dataToB64, loadPdfLib, mergePdf, Mock };
+  window.TG = { NATIONALITIES, FIELDS, PLATFORM_OPTS, LIMITS, splitPeriods, ageParts, arCount, ageSentence, W_AM, W_HOUR, maskEmail, maskPhone, loadXlsx, IMPORT_COLUMNS, normalizeImported, isoDate, LIVE, STATUS, DAYS, PERSON_FIELDS, IMAGE_KEYS, PLACEHOLDERS, call, toAr, toEn, esc, fmtDate, fmtTime, programTime, nationalityText, isSaudi, placeholderMap, fillText, phKey, readAsDataURL, compressImage, transparentPng, packFile, b64ToBlob, dataToB64, loadPdfLib, mergePdf, Mock };
 })();

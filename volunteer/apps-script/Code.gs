@@ -19,17 +19,25 @@ const CONFIG = {
   ORG_NAME: 'جمعية غراس لتنمية الطفل',
   SENDER_NAME: 'تطوع غراس',
   MAX_FILE_MB: 10,
-  TZ: 'Asia/Riyadh'
+  TZ: 'Asia/Riyadh',
+  // الواتساب عبر Kapso: المفتاح ومعرف الرقم يُضبطان من «الإعدادات» في اللوحة (لا تكتب المفتاح هنا)
+  WA_URL: 'https://api.kapso.ai/meta/whatsapp/v24.0/{phone_number_id}/messages',
+  WA_KEY_HEADER: 'X-API-Key',
+  WA_TEMPLATE: 'employer_signature',
+  WA_LANG: 'ar',
+  // حد البحث برقم الهوية (لمنع سحب بيانات المتطوعين جماعيا): عدد مرات البحث كل ١٠ دقائق
+  LOOKUP_LIMIT: 120
 };
 
 // ===================== الثوابت =====================
 const STATUS = {
-  EMPLOYER: 'بانتظار وثيقة صاحب العمل',
+  EMPLOYER: 'بانتظار توقيع صاحب العمل',
   PENDING: 'بانتظار الاعتماد',
   CHANGES: 'مطلوب تعديل',
   APPROVED: 'معتمد',
   REJECTED: 'مرفوض'
 };
+const OLD_EMPLOYER = 'بانتظار وثيقة صاحب العمل';
 const YES = 'نعم', NO = 'لا';
 const DAYS = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const PERSON_FIELDS = [
@@ -47,7 +55,7 @@ const PERSON_FIELDS = [
   ['employer', 'جهة العمل', 'جهة_العمل'],
   ['jobTitle', 'المسمى الوظيفي', 'المسمى_الوظيفي']
 ];
-const IMAGE_KEYS = ['توقيع_المتطوع', 'الختم', 'توقيع_المشرف'];
+const IMAGE_KEYS = ['توقيع_المتطوع', 'توقيع_صاحب_العمل', 'الختم', 'توقيع_المشرف'];
 const FOLDERS = {
   templates: 'القوالب',
   signatures: 'التواقيع والختم',
@@ -67,14 +75,17 @@ const SHEETS = {
     ['updated', 'آخر تحديث'], ['programId', 'معرف البرنامج'], ['token', 'رمز المتابعة'],
     ['person', 'بيانات المتطوع (لا تعدل)'], ['answers', 'الإجابات (لا تعدل)'], ['files', 'المرفقات (لا تعدل)'],
     ['signatureId', 'ملف توقيع المتطوع'], ['draftId', 'ملف الميثاق'], ['employerId', 'ملف صاحب العمل'],
-    ['employerMime', 'نوع ملف صاحب العمل'], ['finalId', 'ملف الوثيقة المعتمدة']
+    ['employerMime', 'نوع ملف صاحب العمل'], ['finalId', 'ملف الوثيقة المعتمدة'],
+    ['employerPhone', 'جوال صاحب العمل'], ['employerToken', 'رمز توقيع صاحب العمل'], ['employerSigId', 'ملف توقيع صاحب العمل'],
+    ['employerSignedAt', 'تاريخ توقيع صاحب العمل'], ['waStatus', 'حالة رسالة الواتساب']
   ] },
   programs: { name: 'البرامج', cols: [
     ['id', 'المعرف'], ['order', 'الترتيب'], ['state', 'الحالة'], ['kind', 'النوع'], ['name', 'الاسم'], ['desc', 'الوصف'],
     ['location', 'المكان'], ['startDate', 'تاريخ البداية'], ['endDate', 'تاريخ النهاية'], ['days', 'الأيام'],
     ['timeFrom', 'الوقت من'], ['timeTo', 'الوقت إلى'], ['hours', 'الساعات'], ['seats', 'المقاعد'], ['gender', 'الفئة'],
     ['employerSig', 'توقيع صاحب العمل لغير السعوديين'], ['extras', 'تفاصيل إضافية (لا تعدل)'], ['questions', 'الأسئلة (لا تعدل)'],
-    ['templateId', 'معرف القالب'], ['templateName', 'اسم القالب'], ['charterText', 'نص القالب'], ['image', 'الصورة'], ['updated', 'آخر تحديث']
+    ['templateId', 'معرف القالب'], ['templateName', 'اسم القالب'], ['charterText', 'نص القالب'], ['image', 'الصورة'], ['updated', 'آخر تحديث'],
+    ['platform', 'بيانات منصة التطوع (لا تعدل)']
   ] },
   volunteers: { name: 'المتطوعون', cols: PERSON_FIELDS.map(function (f) { return [f[0], f[1]]; })
     .concat([['nationalityName', 'اسم الجنسية'], ['created', 'أول تسجيل'], ['updated', 'آخر تحديث'], ['source', 'المصدر']]) },
@@ -90,9 +101,9 @@ const GENERAL_QUESTIONS = [
   { id: 'q_prev', label: 'هل لديك خبرات تطوعية سابقة؟', type: 'yesno', required: true, options: [] },
   { id: 'q_prevd', label: 'تفاصيل الخبرات السابقة', type: 'long', required: false, options: [] },
   { id: 'q_days', label: 'الأيام المتاحة', type: 'multi', required: true, options: DAYS.slice() },
-  { id: 'q_period', label: 'الفترة المتاحة', type: 'choice', required: true, options: ['صباحية', 'مسائية', 'مرنة'] },
-  { id: 'q_hours', label: 'عدد الساعات المتاحة أسبوعيا', type: 'number', required: true, options: [] },
-  { id: 'q_mode', label: 'نوع التطوع المفضل', type: 'choice', required: true, options: ['حضوري', 'عن بعد', 'الاثنين'] },
+  { id: 'q_period', label: 'الفترة المتاحة', type: 'multi', required: true, options: ['صباحية', 'مسائية'] },
+  { id: 'q_hours', label: 'عدد الساعات المتاحة في يوم التطوع', type: 'number', required: true, options: [] },
+  { id: 'q_mode', label: 'نوع التطوع المفضل', type: 'multi', required: true, options: ['حضوري', 'عن بعد'] },
   { id: 'q_add', label: 'ماذا تستطيع أن تضيف للجمعية؟', type: 'long', required: false, options: [] }
 ];
 
@@ -116,7 +127,37 @@ function setup() {
   if (sheet && SpreadsheetApp.getActive().getSheets().length > 1 && sheet.getLastRow() === 0) SpreadsheetApp.getActive().deleteSheet(sheet);
   Logger.log('تم التركيب. المجلد الرئيسي: ' + rootFolder().getUrl());
   if (tpl) Logger.log('القالب الافتراضي: ' + DriveApp.getFileById(tpl).getUrl());
+  migrate();
   Logger.log('رمز دخول اللوحة المبدئي: ' + CONFIG.ADMIN_CODE + ' (غيّره من الإعدادات بعد الدخول)');
+}
+
+// ترحيل البيانات القائمة إلى الإصدار الجديد (يعمل مرة واحدة تلقائيا عند أول طلب بعد تحديث السكربت)
+const MIGRATION = 'v2-employer-whatsapp';
+function migrate() {
+  const P = props();
+  if (P.getProperty('MIGRATION') === MIGRATION) return;
+  const lock = LockService.getScriptLock(); lock.waitLock(30000);
+  try {
+    if (P.getProperty('MIGRATION') === MIGRATION) return;
+    // ١) الحالة الجديدة لتوقيع صاحب العمل
+    const regs = table('regs'), changed = regs.all().filter(function (r) { return r.status === OLD_EMPLOYER; });
+    changed.forEach(function (r) { r.status = STATUS.EMPLOYER; });
+    if (changed.length) regs.bulk(changed, []);
+    // ٢) أسئلة التطوع العام: الفترة ونوع التطوع اختيار متعدد، والساعات في اليوم
+    const progs = table('programs'), g = progs.find('id', 'general');
+    if (g) {
+      const qs = J(g.questions, []), byId = {};
+      GENERAL_QUESTIONS.forEach(function (q) { byId[q.id] = q; });
+      ['q_period', 'q_hours', 'q_mode'].forEach(function (id) {
+        const i = qs.map(function (q) { return q.id; }).indexOf(id);
+        if (i >= 0) qs[i] = JSON.parse(JSON.stringify(byId[id]));
+      });
+      g.questions = JSON.stringify(qs); g.updated = now();
+      progs.put(g);
+    }
+    P.setProperty('MIGRATION', MIGRATION);
+    clearConfigCache();
+  } finally { lock.releaseLock(); }
 }
 
 // ===================== الاستقبال =====================
@@ -129,7 +170,9 @@ function doPost(e) {
     const p = JSON.parse(e.postData.contents);
     const fn = ROUTES[p.action];
     if (!fn) fail('عملية غير معروفة');
-    if (ADMIN_ACTIONS.indexOf(p.action) >= 0) checkAdmin(p.admin);
+    migrate();
+    if (UPLOADER_ACTIONS.indexOf(p.action) >= 0) p.role = checkRole(p.admin);
+    else if (ADMIN_ACTIONS.indexOf(p.action) >= 0) checkAdmin(p.admin);
     out = Object.assign({ ok: true }, fn(p) || {});
   } catch (err) {
     if (!(err && err.user)) console.error(err && err.stack ? err.stack : err);
@@ -139,14 +182,17 @@ function doPost(e) {
 }
 const ROUTES = {
   config: apiConfig, lookupStart: apiLookupStart, lookupVerify: apiLookupVerify, submit: apiSubmit, status: apiStatus, doc: apiDoc,
-  uploadEmployer: apiUploadEmployer, resubmit: apiResubmit, resendLinks: apiResendLinks,
-  adminLogin: function () { return {}; }, adminLoad: apiAdminLoad, regDetail: apiRegDetail, adminFile: apiAdminFile,
+  resubmit: apiResubmit, resendLinks: apiResendLinks,
+  employerView: apiEmployerView, employerSign: apiEmployerSign, resendEmployer: apiResendEmployer,
+  adminLogin: function (p) { return { role: p.role }; }, platformLoad: apiPlatformLoad, testWhatsapp: apiTestWhatsapp, adminLoad: apiAdminLoad, regDetail: apiRegDetail, adminFile: apiAdminFile,
   checkSupervisor: apiCheckSupervisor, approve: apiApprove, requestChanges: apiRequestChanges, reject: apiReject,
   saveProgram: apiSaveProgram, previewTemplate: apiPreviewTemplate, saveSupervisor: apiSaveSupervisor,
   removeSupervisor: apiRemoveSupervisor, saveSettings: apiSaveSettings,
   adminVolunteers: apiAdminVolunteers, importVolunteers: apiImportVolunteers
 };
-const ADMIN_ACTIONS = ['adminLogin', 'adminLoad', 'regDetail', 'adminFile', 'checkSupervisor', 'approve', 'requestChanges',
+// موظف منصة التطوع: رمز مستقل يفتح بيانات المنصة فقط
+const UPLOADER_ACTIONS = ['adminLogin', 'platformLoad'];
+const ADMIN_ACTIONS = ['testWhatsapp', 'adminLoad', 'regDetail', 'adminFile', 'checkSupervisor', 'approve', 'requestChanges',
   'reject', 'saveProgram', 'previewTemplate', 'saveSupervisor', 'removeSupervisor', 'saveSettings', 'adminVolunteers', 'importVolunteers'];
 
 // ===================== واجهة المتطوع =====================
@@ -157,7 +203,7 @@ function apiConfig() {
   const regs = table('regs').all();
   const list = allPrograms().filter(function (p) { return p.state === 'مفتوح'; })
     .sort(function (a, b) { return a.order - b.order; })
-    .map(function (p) { const o = publicProgram(p, regs); if (!o.charterText) o.charterText = defaultText(); return o; });
+    .map(function (p) { const o = publicProgram(p, regs); delete o.platform; if (!o.charterText) o.charterText = defaultText(); return o; });
   const out = { programs: list };
   bigCachePut('config', out, 120);
   return out;
@@ -185,54 +231,24 @@ function bigCacheGet(key) {
   } catch (e) { return null; }
 }
 
-// التعرف على متطوع مسجل: يرسل رمزا من ٤ أرقام إلى بريده المسجل (أو يتحقق بجواله إن لم يكن له بريد)
+// التعرف على متطوع مسجل: برقم الهوية فقط، ترجع بياناته مباشرة (قرار الجمعية).
+// حد لعدد مرات البحث كل ١٠ دقائق يمنع سحب البيانات جماعيا.
 function apiLookupStart(p) {
   const id = digits(p.nationalId);
   if (!/^[12]\d{9}$/.test(id)) return { found: false };
+  const c = CacheService.getScriptCache(), n = Number(c.get('lookup_n') || 0);
+  if (n >= CONFIG.LOOKUP_LIMIT) fail('ضغط على البحث الحين، أكمل بياناتك يدويا');
+  c.put('lookup_n', String(n + 1), 600);
   const v = table('volunteers').find('nationalId', id);
   if (!v) return { found: false };
-  if (v.email) {
-    const c = CacheService.getScriptCache();
-    const last = Number(c.get('otp_t_' + id) || 0);
-    if (Date.now() - last > 55000) {
-      const sent = Number(c.get('otp_c_' + id) || 0);
-      if (sent >= 6) fail('طلبت رموزا كثيرة، حاول بعد ١٠ دقائق');
-      const code = String(Math.floor(1000 + Math.random() * 9000));
-      c.put('otp_' + id, JSON.stringify({ h: hash('otp|' + id + '|' + code), n: 0 }), 600);
-      c.put('otp_t_' + id, String(Date.now()), 600);
-      c.put('otp_c_' + id, String(sent + 1), 600);
-      mail(v.email, 'رمز التحقق ' + code + ' — تطوع غراس', 'رمز التحقق',
-        '<p>أهلا ' + h(firstName(v.name)) + '،</p><p>رمز التحقق لعرض بياناتك في تطوع غراس:</p>' +
-        '<p style="font-size:32px;letter-spacing:8px;color:#1C437D;margin:10px 0" dir="ltr">' + code + '</p>' +
-        '<p style="color:#6F6F6E;font-size:13px">صالح لمدة ١٠ دقائق. إذا ما طلبته، تجاهل هذه الرسالة.</p>');
-    }
-    return { found: true, method: 'email', hint: maskEmail(v.email) };
-  }
-  return v.phone ? { found: true, method: 'phone', hint: maskPhone(v.phone) } : { found: false };
-}
-function apiLookupVerify(p) {
-  const id = digits(p.nationalId);
-  const v = table('volunteers').find('nationalId', id);
-  if (!v) fail('لم نجد بيانات بهذا الرقم');
-  const c = CacheService.getScriptCache();
-  if (p.code != null) {
-    const o = J(c.get('otp_' + id), null);
-    if (!o) fail('انتهت صلاحية الرمز، اضغط «إعادة الإرسال»');
-    if (o.n >= 5) fail('محاولات كثيرة، اضغط «إعادة الإرسال» بعد دقيقة');
-    if (o.h !== hash('otp|' + id + '|' + digits(p.code))) { o.n++; c.put('otp_' + id, JSON.stringify(o), 600); fail('الرمز غير صحيح'); }
-    c.remove('otp_' + id);
-  } else {
-    if (v.email) fail('تحقق بالرمز المرسل إلى بريدك');
-    throttle('ph_' + id);
-    if (!v.phone || digits(p.phone) !== v.phone) { failed('ph_' + id); fail('الجوال لا يطابق المسجل'); }
-  }
   const vt = newToken();
   c.put('vt_' + vt, id, 21600);
   const person = {};
   PERSON_FIELDS.forEach(function (f) { person[f[0]] = v[f[0]] || ''; });
   person.nationalityName = v.nationalityName || '';
-  return { person: person, vtoken: vt };
+  return { found: true, person: person, vtoken: vt };
 }
+function apiLookupVerify() { fail('حدّث الصفحة'); }
 function verifiedFor(vtoken, id) { return !!vtoken && CacheService.getScriptCache().get('vt_' + vtoken) === id; }
 function maskEmail(e) { const a = String(e).split('@'); if (a.length < 2) return ''; const d = a[1].split('.'); return a[0].slice(0, 2) + '•••@' + d[0].slice(0, 1) + '•••.' + d.slice(1).join('.'); }
 function maskPhone(p) { p = String(p || ''); return p ? p.slice(0, 3) + '•••' + p.slice(-4) : ''; }
@@ -255,7 +271,9 @@ function apiSubmit(p) {
     if (regs.some(function (r) { return r.programId === prog.id && r.nationalId === person.nationalId && r.status !== STATUS.REJECTED; }))
       fail('سبق لك التسجيل في هذا البرنامج. افتح رابط المتابعة الذي وصلك بالبريد، أو استعده من الصفحة الرئيسية');
     const emp = prog.employerSig && person.nationality !== 'سعودي';
-    if (emp && !person.employer) fail('اكتب جهة العمل، فهذا البرنامج يحتاج توقيع صاحب العمل');
+    const empPhone = digits(p.employerPhone);
+    if (emp && !/^05\d{8}$/.test(empPhone)) fail('اكتب جوال صاحب العمل، فهذا البرنامج يحتاج توقيعه');
+    if (emp && empPhone === person.phone) fail('جوال صاحب العمل لازم يختلف عن جوالك');
     const regId = nextRegId();
     const answers = cleanAnswers(prog, p.answers);
     reg = {
@@ -263,7 +281,7 @@ function apiSubmit(p) {
       programId: prog.id, programName: prog.name, name: person.name, nationalId: person.nationalId, phone: person.phone,
       email: person.email, nationality: nationalityText(person), employerRequired: emp ? YES : NO,
       answersText: answersText(prog, answers), person: JSON.stringify(person), answers: JSON.stringify(answers),
-      files: '{}', token: newToken()
+      files: '{}', token: newToken(), employerPhone: emp ? empPhone : '', employerToken: emp ? newToken() : ''
     };
     regsT.add(reg);
   } finally { lock.releaseLock(); }
@@ -273,24 +291,24 @@ function apiSubmit(p) {
   reg.signatureId = sigFile.getId();
   reg.files = JSON.stringify(saveQuestionFiles(prog, reg, p.files, {}));
   table('regs').put(reg);
-  // الميثاق بتوقيع المتطوع يُولد الآن فقط إذا احتاج صاحب العمل (يُرفق في الإيميل)، وإلا يُولد عند فتحه أو اعتماده
-  if (reg.status === STATUS.EMPLOYER) {
-    try { ensureDraft(reg, prog); } catch (err) { console.error(err); notifyAdminError('تعذر توليد الميثاق للتسجيل ' + reg.regId, err); }
-  }
+  // رابط توقيع صاحب العمل على الواتساب
+  let waSent = null;
+  if (reg.status === STATUS.EMPLOYER) waSent = sendEmployerLink(reg, prog);
   clearConfigCache();
   upsertVolunteer(JSON.parse(reg.person), verifiedFor(p.vtoken, person.nationalId));
   writeProgramSheet(reg, prog);
   mailVolunteerReceived(reg, prog);
   mailAdmin('تسجيل جديد: ' + reg.name + ' — ' + prog.name, 'تسجيل جديد', regSummaryHtml(reg) +
-    (reg.status === STATUS.EMPLOYER ? '<p>بانتظار رفع وثيقة صاحب العمل.</p>' : '<p>التسجيل بانتظار الاعتماد.</p>'));
-  return { regId: reg.regId, token: reg.token, status: reg.status };
+    (reg.status === STATUS.EMPLOYER ? '<p>بانتظار توقيع صاحب العمل إلكترونيا' + (waSent ? '' : ' (<strong>تعذر إرسال الواتساب</strong>، افتح التسجيل في اللوحة وأرسل الرابط يدويا)') + '.</p>' : '<p>التسجيل بانتظار الاعتماد.</p>'));
+  return { regId: reg.regId, token: reg.token, status: reg.status, waSent: waSent };
 }
 
 function apiStatus(p) {
   const r = regByToken(p.token), prog = getProgram(r.programId) || { name: r.programName, questions: [] };
   return {
     reg: { regId: r.regId, created: r.created, status: r.status, programName: r.programName, programId: r.programId,
-      employerRequired: r.employerRequired === YES, hasEmployer: !!r.employerId, note: r.note, reason: r.reason,
+      employerRequired: r.employerRequired === YES, hasEmployer: !!(r.employerId || r.employerSigId), note: r.note, reason: r.reason,
+      employerPhone: maskPhone(r.employerPhone), employerPhoneFull: r.status === STATUS.CHANGES ? r.employerPhone : '', employerSignedAt: r.employerSignedAt,
       approvedAt: r.approvedAt, person: J(r.person, {}), answers: J(r.answers, {}) },
     program: (function (o) { if (!o.charterText) o.charterText = defaultText(); return o; })(publicProgram(prog, table('regs').all()))
   };
@@ -306,18 +324,102 @@ function apiDoc(p) {
   return fileOut(DriveApp.getFileById(r.draftId), 'ميثاق التطوع - ' + r.regId + ' - للتوقيع.pdf');
 }
 
-function apiUploadEmployer(p) {
+// ——— توقيع صاحب العمل (من رابط الواتساب) ———
+function regByEmployerToken(t) {
+  t = String(t || '');
+  if (!/^[a-f0-9]{32,}$/.test(t)) fail('الرابط غير صحيح');
+  const r = table('regs').find('employerToken', t);
+  if (!r) fail('الرابط غير صحيح أو منتهي');
+  return r;
+}
+function apiEmployerView(p) {
+  const r = regByEmployerToken(p.etoken);
+  if ([STATUS.EMPLOYER, STATUS.PENDING, STATUS.APPROVED, STATUS.CHANGES].indexOf(r.status) < 0) fail('هذا الطلب لم يعد متاحا');
+  const prog = getProgram(r.programId) || { name: r.programName, questions: [] };
+  const o = publicProgram(prog, []); delete o.platform; delete o.questions;
+  if (!o.charterText) o.charterText = defaultText();
+  const per = J(r.person, {});
+  return { signed: !!r.employerSigId, volunteer: r.name, regId: r.regId, program: o,
+    person: { name: per.name, nationalId: per.nationalId, nationality: per.nationality, nationalityName: per.nationalityName, gender: per.gender, birthDate: per.birthDate,
+      phone: per.phone, email: per.email, city: per.city, district: per.district, qualification: per.qualification, major: per.major, employer: per.employer, jobTitle: per.jobTitle } };
+}
+function apiEmployerSign(p) {
+  const sigB64 = String(p.signature || '').split(',').pop();
+  if (!sigB64) fail('التوقيع مطلوب');
+  const lock = LockService.getScriptLock(); lock.waitLock(30000);
+  let r;
+  try {
+    r = regByEmployerToken(p.etoken);
+    if (r.employerSigId) fail('سبق التوقيع على هذا الميثاق');
+    if (r.status !== STATUS.EMPLOYER) fail('هذا الطلب لم يعد بانتظار توقيعك');
+    r.employerSigId = folder('employer').createFile(Utilities.newBlob(Utilities.base64Decode(sigB64), 'image/png', 'توقيع صاحب العمل - ' + r.name + ' - ' + r.regId + '.png')).getId();
+    r.employerSignedAt = now(); r.status = STATUS.PENDING; r.updated = now();
+    if (r.draftId) { trash(r.draftId); r.draftId = ''; }
+    table('regs').put(r);
+  } finally { lock.releaseLock(); }
+  writeProgramSheet(r, getProgram(r.programId));
+  mail(r.email, 'وقّع صاحب العمل على ميثاقك — ' + r.programName, 'وقّع صاحب العمل',
+    '<p>أهلا ' + h(firstName(r.name)) + '،</p><p>وقّع صاحب العمل على ميثاق تطوعك في <strong>' + h(r.programName) + '</strong>، وانتقل طلبك للمشرف للاعتماد.</p>',
+    { text: 'متابعة التسجيل', url: trackLink(r) });
+  mailAdmin('وقّع صاحب العمل: ' + r.name + ' — ' + r.programName, 'وقّع صاحب العمل إلكترونيا', regSummaryHtml(r) + '<p>التسجيل جاهز للاعتماد.</p>');
+  return {};
+}
+// المتطوع يعيد إرسال الرابط، أو يغيّر رقم صاحب العمل
+function apiResendEmployer(p) {
   const r = regByToken(p.token);
-  if ([STATUS.EMPLOYER, STATUS.CHANGES].indexOf(r.status) < 0) fail('لا يمكن رفع الوثيقة في هذه المرحلة');
-  const f = saveUpload(p.file, folder('employer'), 'وثيقة صاحب العمل - ' + r.name + ' - ' + r.regId);
-  if (r.employerId) trash(r.employerId);
-  r.employerId = f.getId(); r.employerMime = f.getMimeType();
-  if (r.status === STATUS.EMPLOYER) r.status = STATUS.PENDING;
+  if (r.status !== STATUS.EMPLOYER) fail('لا يمكن الإرسال في هذه المرحلة');
+  const c = CacheService.getScriptCache(), k = 'wa_' + r.regId;
+  if (c.get(k)) fail('انتظر دقيقة قبل إعادة الإرسال');
+  const ph = digits(p.phone);
+  if (ph) {
+    if (!/^05\d{8}$/.test(ph)) fail('رقم الجوال غير صحيح');
+    if (ph === r.phone) fail('جوال صاحب العمل لازم يختلف عن جوالك');
+    r.employerPhone = ph; r.employerToken = newToken();
+  }
+  if (!r.employerPhone) fail('اكتب جوال صاحب العمل');
+  if (!r.employerToken) r.employerToken = newToken();
   r.updated = now();
   table('regs').put(r);
-  writeProgramSheet(r, getProgram(r.programId));
-  mailAdmin('وثيقة صاحب العمل: ' + r.name + ' — ' + r.programName, 'رُفعت وثيقة صاحب العمل', regSummaryHtml(r) + '<p>التسجيل جاهز للاعتماد.</p>');
-  return { status: r.status };
+  c.put(k, '1', 60);
+  const ok = sendEmployerLink(r, getProgram(r.programId) || { name: r.programName });
+  return { waSent: ok, employerPhone: maskPhone(r.employerPhone) };
+}
+function employerLink(r) { return (siteBase() || '') + 'index.html#e=' + r.employerToken; }
+function sendEmployerLink(r, prog) {
+  let ok = false;
+  try { sendWhatsapp(r.employerPhone, [r.name, prog.name || r.programName, employerLink(r)]); ok = true; }
+  catch (err) { console.error(err); notifyAdminError('تعذر إرسال واتساب صاحب العمل للتسجيل ' + r.regId, err); }
+  r.waStatus = (ok ? 'أُرسل ' : 'تعذر ') + now();
+  if (r._row) table('regs').put(r);
+  return ok;
+}
+
+// ——— الواتساب عبر Kapso (واجهة متوافقة مع WhatsApp Cloud API) ———
+function waConfig() {
+  const P = props();
+  return { phoneNumberId: P.getProperty('WA_PHONE_ID') || '', apiKey: P.getProperty('WA_KEY') || '',
+    template: P.getProperty('WA_TEMPLATE') || CONFIG.WA_TEMPLATE, lang: P.getProperty('WA_LANG') || CONFIG.WA_LANG, url: P.getProperty('WA_URL') || '' };
+}
+function sendWhatsapp(phone, params) {
+  const w = waConfig();
+  if (!w.phoneNumberId || !w.apiKey) throw new Error('الواتساب غير مفعّل: أضف معرف الرقم والمفتاح من الإعدادات');
+  const to = '966' + digits(phone).replace(/^0/, '');
+  const url = (w.url || CONFIG.WA_URL).replace('{phone_number_id}', encodeURIComponent(w.phoneNumberId));
+  const headers = {}; headers[CONFIG.WA_KEY_HEADER] = w.apiKey;
+  const res = UrlFetchApp.fetch(url, {
+    method: 'post', contentType: 'application/json', headers: headers, muteHttpExceptions: true,
+    payload: JSON.stringify({ messaging_product: 'whatsapp', to: to, type: 'template',
+      template: { name: w.template, language: { code: w.lang },
+        components: [{ type: 'body', parameters: params.map(function (t) { return { type: 'text', text: String(t || '').slice(0, 500) }; }) }] } })
+  });
+  if (res.getResponseCode() >= 300) throw new Error('رد Kapso ' + res.getResponseCode() + ': ' + res.getContentText().slice(0, 400));
+}
+function apiTestWhatsapp(p) {
+  const to = digits(p.to);
+  if (!/^05\d{8}$/.test(to)) fail('رقم الجوال غير صحيح');
+  try { sendWhatsapp(to, ['متطوع تجريبي', 'برنامج تجريبي', (siteBase() || 'https://www.Gheras.sa/')]); }
+  catch (err) { fail('تعذر الإرسال: ' + err.message); }
+  return {};
 }
 
 function apiResubmit(p) {
@@ -329,7 +431,9 @@ function apiResubmit(p) {
   const person = cleanPerson(p.person);
   if (person.nationalId !== r.nationalId) fail('لا يمكن تغيير رقم الهوية في التعديل');
   const emp = prog.employerSig && person.nationality !== 'سعودي';
-  if (emp && !person.employer) fail('اكتب جهة العمل');
+  const empPhone = digits(p.employerPhone) || r.employerPhone;
+  if (emp && !r.employerSigId && !r.employerId && !/^05\d{8}$/.test(empPhone)) fail('اكتب جوال صاحب العمل');
+  if (emp && !r.employerSigId && empPhone === person.phone) fail('جوال صاحب العمل لازم يختلف عن جوالك');
   const answers = Object.assign(J(r.answers, {}), cleanAnswers(prog, p.answers));
   r.person = JSON.stringify(person); r.answers = JSON.stringify(answers); r.answersText = answersText(prog, answers);
   r.name = person.name; r.phone = person.phone; r.email = person.email; r.nationality = nationalityText(person);
@@ -339,17 +443,14 @@ function apiResubmit(p) {
     if (r.signatureId) trash(r.signatureId);
     r.signatureId = folder('signatures').createFile(Utilities.newBlob(Utilities.base64Decode(sigB64), 'image/png', 'توقيع المتطوع - ' + r.regId + '.png')).getId();
   }
-  if (p.employerFile && p.employerFile.b64) {
-    const f = saveUpload(p.employerFile, folder('employer'), 'وثيقة صاحب العمل - ' + r.name + ' - ' + r.regId);
-    if (r.employerId) trash(r.employerId);
-    r.employerId = f.getId(); r.employerMime = f.getMimeType();
-  }
   r.employerRequired = emp ? YES : NO;
-  r.status = emp && !r.employerId ? STATUS.EMPLOYER : STATUS.PENDING;
+  const needSig = emp && !r.employerSigId && !r.employerId;
+  if (needSig && (empPhone !== r.employerPhone || !r.employerToken)) { r.employerPhone = empPhone; r.employerToken = newToken(); }
+  r.status = needSig ? STATUS.EMPLOYER : STATUS.PENDING;
   r.note = ''; r.updated = now();
   if (r.draftId) { trash(r.draftId); r.draftId = ''; }
   table('regs').put(r);
-  if (r.status === STATUS.EMPLOYER) { try { ensureDraft(r, prog); } catch (err) { console.error(err); } }
+  if (r.status === STATUS.EMPLOYER) sendEmployerLink(r, prog);
   upsertVolunteer(person, true);
   writeProgramSheet(r, prog);
   mailAdmin('أعاد الإرسال بعد التعديل: ' + r.name + ' — ' + r.programName, 'أعاد المتطوع الإرسال', regSummaryHtml(r));
@@ -377,7 +478,8 @@ function apiAdminLoad() {
   return {
     programs: allPrograms().map(function (p) { const o = publicProgram(p, regs); delete o.charterText; return o; }),
     supervisors: activeSupervisors().map(function (s) { return { id: s.id, name: s.name, title: s.title, hasSignature: !!s.signatureId }; }),
-    settings: { alertEmail: alertEmail(), hasStamp: !!stampId, stamp: stampId ? dataUrl(stampId) : '' },
+    settings: { alertEmail: alertEmail(), hasStamp: !!stampId, stamp: stampId ? dataUrl(stampId) : '', hasUploader: !!props().getProperty('UPLOADER_HASH'),
+      wa: (function (w) { return { phoneNumberId: w.phoneNumberId, template: w.template, lang: w.lang, url: w.url, hasKey: !!w.apiKey, ready: !!(w.apiKey && w.phoneNumberId) }; })(waConfig()) },
     regs: regs.reverse().map(lightReg)
   };
 }
@@ -388,7 +490,9 @@ function apiRegDetail(p) {
   const o = lightReg(r);
   Object.assign(o, { person: J(r.person, {}), answers: J(r.answers, {}), note: r.note, reason: r.reason,
     approvedBy: r.approvedBy, approvedAt: r.approvedAt, hasFinal: !!r.finalId, finalUrl: r.finalUrl,
-    files: Object.keys(files).map(function (k) { return { key: k }; }), signature: r.signatureId ? dataUrl(r.signatureId) : '' });
+    files: Object.keys(files).map(function (k) { return { key: k }; }), signature: r.signatureId ? dataUrl(r.signatureId) : '',
+    hasEmployerFile: !!r.employerId, employerPhone: r.employerPhone, employerSignedAt: r.employerSignedAt, waStatus: r.waStatus,
+    employerLink: r.status === STATUS.EMPLOYER && r.employerToken ? employerLink(r) : '' });
   return { reg: o, program: publicProgram(prog, []) };
 }
 
@@ -413,6 +517,7 @@ function apiApprove(p) {
   const s = checkSupervisor(p.supervisorId, p.code);
   const r = regById(p.regId);
   if (r.status !== STATUS.PENDING) fail('هذا التسجيل ليس بانتظار الاعتماد');
+  if (r.employerRequired === YES && !r.employerSigId && !r.employerId) fail('لم يوقّع صاحب العمل بعد');
   const prog = getProgram(r.programId) || { name: r.programName, questions: [] };
   const appr = { name: s.name, title: s.title, signatureId: s.signatureId, date: new Date() };
   let blob;
@@ -484,6 +589,7 @@ function apiSaveProgram(p) {
     extras: JSON.stringify((x.extras || []).filter(function (e) { return e && e.k; }).slice(0, 30).map(function (e) { return { k: str(e.k, 60), v: str(e.v, 1000) }; })),
     questions: JSON.stringify(cleanQuestions(x.questions)),
     image: /^data:image\/(jpeg|png|webp);base64,/.test(x.image || '') && x.image.length < 49000 ? x.image : '',
+    platform: JSON.stringify(cleanPlatform(x.platform)),
     updated: now()
   });
   // القالب
@@ -502,6 +608,35 @@ function apiSaveProgram(p) {
   if (row) t.put(o); else t.add(o);
   clearConfigCache();
   return { id: o.id };
+}
+
+// بيانات منصة العمل التطوعي (حقول دليل إنشاء الفرصة التطوعية)
+function cleanPlatform(x) {
+  x = x || {};
+  const t = ['mainField', 'subField', 'coordinator', 'coordinatorPhone', 'level', 'participation', 'publishDate', 'volunteerType', 'disability', 'disabilityTypes', 'languages', 'interview', 'supervisor', 'videoUrl'];
+  const long = ['orgBenefits', 'tasks', 'extraReqs', 'volBenefits', 'support'];
+  const n = ['hourValue', 'ageFrom', 'ageTo', 'waitlist'];
+  const b = ['urgent', 'publishNow', 'remote', 'govPartner'];
+  const o = {};
+  t.forEach(function (k) { o[k] = str(x[k], 300); });
+  long.forEach(function (k) { o[k] = str(x[k], 3000); });
+  n.forEach(function (k) { o[k] = String(x[k] == null ? '' : x[k]).replace(/[^\d.]/g, '').slice(0, 8); });
+  b.forEach(function (k) { o[k] = !!x[k]; });
+  return o;
+}
+// واجهة موظف منصة التطوع: البرامج ببيانات المنصة، والمتطوعون المعتمدون
+function apiPlatformLoad() {
+  const vols = {};
+  table('volunteers').all().forEach(function (v) { vols[v.nationalId] = v; });
+  const regs = table('regs').all().filter(function (r) { return r.status === STATUS.APPROVED; }).map(function (r) {
+    const per = Object.assign({}, vols[r.nationalId] || {}, J(r.person, {})); delete per._row;
+    return { regId: r.regId, programId: r.programId, approvedAt: r.approvedAt, person: per };
+  });
+  const all = table('regs').all();
+  const programs = allPrograms().filter(function (p) { return p.kind !== 'general'; }).map(function (p) {
+    const o = publicProgram(p, all); delete o.charterText; delete o.questions; return o;
+  });
+  return { programs: programs, regs: regs };
 }
 
 function apiPreviewTemplate(p) {
@@ -555,6 +690,21 @@ function apiSaveSettings(p) {
     const f = folder('signatures').createFile(Utilities.newBlob(Utilities.base64Decode(String(p.stamp).split(',').pop()), 'image/png', 'ختم الجمعية.png'));
     P.setProperty('STAMP_ID', f.getId());
     if (old) trash(old);
+  }
+  if (p.uploaderCode) {
+    if (String(p.uploaderCode).length < 6) fail('رمز موظف المنصة ٦ خانات على الأقل');
+    if (hash(String(p.uploaderCode)) === P.getProperty('ADMIN_HASH')) fail('رمز موظف المنصة لازم يختلف عن رمز الإدارة');
+    P.setProperty('UPLOADER_HASH', hash(String(p.uploaderCode)));
+  }
+  if (p.wa) {
+    const w = p.wa;
+    P.setProperty('WA_PHONE_ID', str(w.phoneNumberId, 60).replace(/\s/g, ''));
+    P.setProperty('WA_TEMPLATE', str(w.template, 120) || CONFIG.WA_TEMPLATE);
+    P.setProperty('WA_LANG', str(w.lang, 12) || CONFIG.WA_LANG);
+    const u = str(w.url, 300);
+    if (u && !/^https:\/\/[^\s"'<>]+$/.test(u)) fail('عنوان الإرسال غير صحيح');
+    P.setProperty('WA_URL', u);
+    if (w.apiKey) P.setProperty('WA_KEY', str(w.apiKey, 400));
   }
   if (p.newAdminCode) {
     if (String(p.newAdminCode).length < 6) fail('رمز الدخول ٦ خانات على الأقل');
@@ -635,10 +785,15 @@ function buildPdf(r, prog, appr) {
     const stampId = props().getProperty('STAMP_ID');
     const imgs = {
       'توقيع_المتطوع': [r.signatureId ? blobOf(r.signatureId) : null, 150, 70],
+      'توقيع_صاحب_العمل': [r.employerSigId ? blobOf(r.employerSigId) : null, 150, 70],
       'الختم': [appr && stampId ? blobOf(stampId) : null, 105, 105],
       'توقيع_المشرف': [appr && appr.signatureId ? blobOf(appr.signatureId) : null, 150, 70]
     };
     const parts = [doc.getBody(), doc.getHeader(), doc.getFooter()].filter(function (x) { return x; });
+    // قالب قديم بلا مكان لتوقيع صاحب العمل: نضيفه في آخر الميثاق
+    if (r.employerSigId && !parts.some(function (sec) { return sec.findText(phRx('توقيع_صاحب_العمل')); })) {
+      doc.getBody().appendParagraph('توقيع صاحب العمل (إلكترونيا ' + fmtDate(String(r.employerSignedAt || '').slice(0, 10)) + '): {توقيع_صاحب_العمل}').setLeftToRight(false).setAlignment(DocumentApp.HorizontalAlignment.RIGHT);
+    }
     parts.forEach(function (sec) {
       Object.keys(imgs).forEach(function (k) { putImage(sec, k, imgs[k][0], imgs[k][1], imgs[k][2]); });
       Object.keys(map).forEach(function (k) { sec.replaceText(phRx(k), safeRepl(map[k])); });
@@ -769,8 +924,8 @@ function defaultTemplate() {
   // جدول التواقيع: الأعمدة من اليسار إلى اليمين (الجمعية، صاحب العمل، المتطوع) ليقرأ من اليمين
   const tbl = b.appendTable([
     ['اعتماد الجمعية', 'صاحب العمل (لغير السعوديين عند الطلب)', 'المتطوع'],
-    ['{الختم} {توقيع_المشرف}', '\n\n\n', '{توقيع_المتطوع}'],
-    ['{اسم_المشرف}\n{صفة_المشرف}\n{تاريخ_الاعتماد}', 'الاسم والتوقيع والختم', '{الاسم}\n{التاريخ}']
+    ['{الختم} {توقيع_المشرف}', '{توقيع_صاحب_العمل}', '{توقيع_المتطوع}'],
+    ['{اسم_المشرف}\n{صفة_المشرف}\n{تاريخ_الاعتماد}', 'توقيع إلكتروني', '{الاسم}\n{التاريخ}']
   ]);
   tbl.setBorderColor('#D5DCE7');
   for (let i = 0; i < tbl.getNumRows(); i++) {
@@ -797,14 +952,13 @@ function defaultTemplate() {
 function mailVolunteerReceived(r, prog) {
   const emp = r.status === STATUS.EMPLOYER;
   const att = [];
-  if (emp && r.draftId) { try { att.push(DriveApp.getFileById(r.draftId).getBlob()); } catch (e) {} }
   const body = '<p>أهلا ' + h(firstName(r.name)) + '،</p><p>وصلنا تسجيلك في <strong>' + h(prog.name) + '</strong>، ورقم تسجيلك <strong dir="ltr">' + h(r.regId) + '</strong>.</p>' +
     (emp
-      ? '<p><strong>باقي خطوة وحدة:</strong> أرفقنا لك الميثاق بتوقيعك. اطبعه، وخذ توقيع صاحب العمل وختمه، ثم صوّره وارفعه من رابط المتابعة.</p>'
+      ? '<p><strong>باقي خطوة وحدة:</strong> أرسلنا رابط التوقيع لصاحب العمل على الواتساب. يفتحه ويقرأ الميثاق ويوقّع من جواله، وأول ما يوقّع يوصل طلبك للمشرف للاعتماد.</p>'
       : '<p>تسجيلك الآن عند فريق الجمعية للمراجعة والاعتماد، وتوصلك الوثيقة المعتمدة على هذا البريد.</p>') +
     '<p style="color:#6F6F6E;font-size:13px">احتفظ بهذا الإيميل؛ الرابط خاص بك ويفتح تسجيلك من أي جهاز.</p>';
   mail(r.email, 'وصل تسجيلك في ' + prog.name + ' — تطوع غراس', emp ? 'خطوة أخيرة: توقيع صاحب العمل' : 'وصل تسجيلك',
-    body, { text: emp ? 'ارفع وثيقة صاحب العمل' : 'متابعة التسجيل', url: trackLink(r) }, att);
+    body, { text: 'متابعة التسجيل', url: trackLink(r) }, att);
 }
 function mailVolunteerApproved(r, prog, pdf) {
   mail(r.email, 'اعتُمد تسجيلك في ' + prog.name + ' — تطوع غراس', 'مبروك، اعتُمد تسجيلك',
@@ -969,7 +1123,7 @@ function programFromRow(o) {
     days: o.days ? o.days.split('،').map(function (s) { return s.trim(); }).filter(function (s) { return s; }) : [],
     timeFrom: o.timeFrom, timeTo: o.timeTo, hours: o.hours, seats: o.seats, gender: o.gender || 'الكل',
     employerSig: o.employerSig === YES, extras: J(o.extras, []), questions: J(o.questions, []),
-    templateId: o.templateId, templateName: o.templateName, charterText: o.charterText, image: o.image
+    templateId: o.templateId, templateName: o.templateName, charterText: o.charterText, image: o.image, platform: J(o.platform, {})
   };
 }
 function publicProgram(p, regs) {
@@ -983,7 +1137,7 @@ function publicProgram(p, regs) {
 function lightReg(r) {
   return { regId: r.regId, created: r.created, status: r.status, programId: r.programId, programName: r.programName, name: r.name,
     nationalId: r.nationalId, phone: r.phone, nationality: r.nationality, saudi: r.nationality === 'سعودي',
-    employerRequired: r.employerRequired === YES, hasEmployer: !!r.employerId, updated: r.updated };
+    employerRequired: r.employerRequired === YES, hasEmployer: !!(r.employerId || r.employerSigId), updated: r.updated };
 }
 function regByToken(t) {
   t = String(t || '');
@@ -1004,6 +1158,13 @@ function checkSupervisor(id, code) {
 function checkAdmin(code) {
   throttle('admin');
   if (!code || hash(String(code)) !== props().getProperty('ADMIN_HASH')) { failed('admin'); fail('رمز الدخول غير صحيح'); }
+}
+function checkRole(code) {
+  throttle('admin');
+  const hc = code ? hash(String(code)) : '', P = props();
+  if (hc && hc === P.getProperty('ADMIN_HASH')) return 'admin';
+  if (hc && P.getProperty('UPLOADER_HASH') && hc === P.getProperty('UPLOADER_HASH')) return 'uploader';
+  failed('admin'); fail('رمز الدخول غير صحيح');
 }
 // حماية من التخمين: أكثر من ١٥ محاولة خاطئة خلال ١٠ دقائق توقف الدخول مؤقتا
 function throttle(k) { const n = Number(CacheService.getScriptCache().get('fail_' + k) || 0); if (n >= 15) fail('محاولات كثيرة خاطئة، حاول بعد ١٠ دقائق'); }
@@ -1042,6 +1203,7 @@ function cleanAnswers(prog, a) {
     let v = a[q.id];
     if (q.type === 'multi') v = (Array.isArray(v) ? v : []).map(function (x) { return str(x, 120); }).filter(function (x) { return q.options.indexOf(x) >= 0; });
     else v = str(v, 3000);
+    if (q.id === 'q_hours' && v) { const n = Number(digits(v)); if (!(n >= 1 && n <= 8)) fail('عدد الساعات في يوم التطوع من ١ إلى ٨'); v = String(n); }
     out[q.id] = v;
   });
   return out;

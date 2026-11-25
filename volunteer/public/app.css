@@ -55,7 +55,7 @@ a.stage-link { display: inline-flex; align-items: center; gap: 8px; }
   color: var(--c); background: color-mix(in srgb, var(--c) 13%, transparent);
 }
 .st::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
-.st[data-s="بانتظار وثيقة صاحب العمل"] { --c: var(--st-employer); }
+.st[data-s="بانتظار وثيقة صاحب العمل"], .st[data-s="بانتظار توقيع صاحب العمل"] { --c: var(--st-employer); }
 .st[data-s="بانتظار الاعتماد"] { --c: var(--st-pending); }
 .st[data-s="مطلوب تعديل"] { --c: var(--st-changes); }
 .st[data-s="معتمد"] { --c: var(--st-approved); }
@@ -454,3 +454,21 @@ body.stage-mode .mode-pill { color: rgba(255, 255, 255, .8); }
 .xl-errs.warn { color: var(--ink-2); }
 .xl-errs b { font-weight: 500; }
 .admin label.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
+
+/* ——— منصة التطوع: الحد اليومي والنسخ ——— */
+.chip.over { background: var(--danger); color: #fff; }
+.split-alert { border-radius: var(--radius-md); padding: 14px 18px; margin: 0 0 18px; background: var(--danger-bg); border-inline-start: 4px solid var(--danger); color: var(--ink); font-size: 15px; display: grid; gap: 4px; }
+.split-alert strong { color: var(--danger); font-weight: 500; }
+.split-alert ul { margin: 4px 0 0; padding-inline-start: 20px; }
+.rules-box { border-radius: var(--radius-md); padding: 16px 20px; margin: 0 0 18px; background: var(--well); border-inline-start: 4px solid var(--accent); font-size: 15px; }
+.rules-box h3 { margin: 0 0 8px; font-size: 16px; font-weight: 500; color: var(--accent); }
+.rules-box ul { margin: 0; padding-inline-start: 20px; display: grid; gap: 6px; color: var(--ink-2); }
+.rules-box b { font-weight: 500; color: var(--ink); }
+.cp-list { display: grid; }
+.cp-row { display: grid; grid-template-columns: minmax(120px, 34%) 1fr 40px; gap: 12px; align-items: start; padding: 11px 0; border-bottom: 1px solid var(--line, rgba(0,0,0,.08)); }
+.cp-row:last-child { border-bottom: 0; }
+.cp-k { color: var(--ink-2); font-size: 14px; padding-top: 2px; }
+.cp-v { white-space: pre-wrap; word-break: break-word; }
+.cp-v.cp-none { color: var(--danger); font-size: 14px; }
+.cp-btn { justify-self: end; }
+@media (max-width: 560px) { .cp-row { grid-template-columns: 1fr 40px; } .cp-k { grid-column: 1 / -1; padding: 0; } }

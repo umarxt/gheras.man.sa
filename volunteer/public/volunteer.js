@@ -27,7 +27,7 @@
   let programs = [];
   let S = blank();
   let pad = null;
-  function blank() { return { vtoken: "", step: 0, mode: "new", token: null, person: {}, kind: "", programId: "", answers: {}, files: {}, agreed: false, employerFile: null, note: "" }; }
+  function blank() { return { vtoken: "", step: 0, mode: "new", token: null, person: {}, kind: "", programId: "", answers: {}, files: {}, agreed: false, employerPhone: "", note: "" }; }
   const program = () => programs.find((p) => p.id === S.programId) || null;
   const general = () => programs.find((p) => p.kind === "general") || null;
   const needsEmployer = () => { const p = program(); return !!(p && p.employerSig && S.person.nationality && !T.isSaudi(S.person)); };
@@ -50,7 +50,7 @@
     clearTimeout(saveT);
     saveT = setTimeout(() => {
       const ok = store.set(DRAFT, Object.assign({}, S, { agreed: false, savedAt: Date.now() }));
-      if (!ok) store.set(DRAFT, Object.assign({}, S, { files: {}, employerFile: null, agreed: false, savedAt: Date.now() }));
+      if (!ok) store.set(DRAFT, Object.assign({}, S, { files: {}, agreed: false, savedAt: Date.now() }));
       const st = $("#saveState"); st.textContent = "حُفظ في جهازك"; st.style.opacity = 1;
       clearTimeout(st._h); st._h = setTimeout(() => (st.style.opacity = 0), 1600);
     }, 400);
@@ -66,7 +66,7 @@
   const field = (id, label, html, req, hint) => `<div class="field" data-f="${id}"><label for="${id}">${label}${req ? '<span class="req">*</span>' : ""}</label>${html}${hint ? `<p class="hint">${hint}</p>` : ""}<p class="hint err" hidden></p></div>`;
   const input = (id, val, attrs) => `<input class="input" id="${id}" name="${id}" value="${esc(val || "")}" ${attrs || ""}>`;
   const seg = (name, opts, val, multi) => `<div class="seg" role="${multi ? "group" : "radiogroup"}" id="${name}">${opts.map((o) => `<label class="${(multi ? (val || []).includes(o) : val === o) ? "checked" : ""}"><input type="${multi ? "checkbox" : "radio"}" name="${name}" value="${esc(o)}" ${(multi ? (val || []).includes(o) : val === o) ? "checked" : ""}>${esc(o)}</label>`).join("")}</div>`;
-  const segField = (name, label, opts, val, req, multi) => `<div class="field" data-f="${name}"><span class="field-label">${label}${req ? '<span class="req">*</span>' : ""}${multi ? ' <small class="hint" style="display:inline">يمكن اختيار أكثر من واحد</small>' : ""}</span>${seg(name, opts, val, multi)}<p class="hint err" hidden></p></div>`;
+  const segField = (name, label, opts, val, req, multi) => `<div class="field" data-f="${name}"><span class="field-label">${label}${req ? '<span class="req">*</span>' : ""}${multi ? ' <small class="hint" style="display:inline">تقدر تختار أكثر من خيار</small>' : ""}</span>${seg(name, opts, val, multi)}<p class="hint err" hidden></p></div>`;
 
   function hero(n, total, eyebrow, title, lead) {
     return `<div class="step-hero"><div><p class="eyebrow">${eyebrow}</p><h1>${title}</h1><p class="lead">${lead}</p></div><div class="axis-num" aria-hidden="true">${toAr(n)}</div></div><div class="band" aria-hidden="true"></div>`;
@@ -98,20 +98,16 @@
     const p = S.person;
     return hero(n, t, eb, "بياناتك الشخصية", "تعبّيها مرة وحدة، وتنحفظ في جهازك حتى ترسل") + editNote() +
       `<div class="card"><h2 class="card-title">الهوية والتواصل</h2><div class="grid grid-2">
-        ${field("nationalId", "رقم الهوية أو الإقامة", input("nationalId", p.nationalId, 'inputmode="numeric" dir="ltr" maxlength="10" autocomplete="off"'), true, S.vtoken ? "تم التحقق، وبياناتك معبأة من سجلنا" : "١٠ أرقام. إذا سجلت عندنا قبل، نرجّع لك بياناتك")}
-        <div class="verify" id="verifyBox" hidden></div>
+        ${field("nationalId", "رقم الهوية أو الإقامة", input("nationalId", p.nationalId, 'inputmode="numeric" dir="ltr" maxlength="10" autocomplete="off"'), true, S.vtoken ? "بياناتك معبأة من سجلنا" : "١٠ أرقام. إذا سجلت عندنا قبل، نرجّع لك بياناتك")}
         ${field("phone", "رقم الجوال", input("phone", p.phone, 'inputmode="tel" dir="ltr" maxlength="10" placeholder="05xxxxxxxx" autocomplete="tel"'), true)}
         ${field("email", "البريد الإلكتروني", input("email", p.email, 'type="email" dir="ltr" autocomplete="email" placeholder="name@example.com"'), true, "توصلك عليه الوثيقة ورابط المتابعة")}
       </div></div>
       <div class="card"><h2 class="card-title">البيانات الأساسية</h2><div class="grid">
         ${field("name", "الاسم الرباعي", input("name", p.name, 'autocomplete="name"'), true)}
         <div class="grid grid-2">
-          ${segField("nationality", "الجنسية", ["سعودي", "غير سعودي"], p.nationality, true)}
+          ${field("nationality", "الجنسية", input("nationality", p.nationality === "سعودي" ? "سعودي" : p.nationalityName || "", 'list="natList" autocomplete="off" placeholder="اختر أو ابحث"') + `<datalist id="natList">${T.NATIONALITIES.map((n) => `<option value="${esc(n)}">`).join("")}</datalist>`, true)}
           ${segField("gender", "الجنس", ["ذكر", "أنثى"], p.gender, true)}
         </div>
-        <div class="extra ${p.nationality === "غير سعودي" ? "open" : ""}" data-show-when="nationality=غير سعودي"><div><div class="extra-in">
-          ${field("nationalityName", "اكتب جنسيتك", input("nationalityName", p.nationalityName, 'placeholder="مثال: مصري"'), true)}
-        </div></div></div>
         <div class="grid grid-3">
           ${field("birthDate", "تاريخ الميلاد", input("birthDate", p.birthDate, 'type="date" max="' + new Date().toISOString().slice(0, 10) + '"'), true, '<span class="age-hint" id="ageHint">' + ageHint(p.birthDate) + "</span>")}
           ${field("city", "المدينة", input("city", p.city || "الرياض"), true)}
@@ -122,53 +118,27 @@
         ${segField("qualification", "المؤهل الدراسي", QUALS, p.qualification, true)}
         <div class="grid grid-3">
           ${field("major", "التخصص", input("major", p.major))}
-          ${field("employer", "جهة العمل", input("employer", p.employer), false, "يلزم لغير السعوديين في بعض البرامج")}
+          ${field("employer", "جهة العمل", input("employer", p.employer))}
           ${field("jobTitle", "المسمى الوظيفي", input("jobTitle", p.jobTitle))}
         </div>
       </div></div>`;
   }
-  // ——— التعرف على المتطوع المسجل: رقم الهوية ثم رمز على البريد (أو الجوال إذا ما له بريد) ———
-  let lookedUp = "", resendAt = 0;
+  // ——— التعرف على المتطوع المسجل: برقم الهوية فقط، وتتعبى بياناته مباشرة ———
+  let lookedUp = "";
   async function startLookup(force) {
     const id = $("#nationalId").value;
     if (S.mode === "edit" || !/^[12]\d{9}$/.test(id) || (!force && lookedUp === id) || (S.vtoken && S.person.nationalId === id)) return;
     lookedUp = id;
-    const box = $("#verifyBox");
     try {
       const r = await T.call("lookupStart", { nationalId: id });
-      if (!r.found || $("#nationalId").value !== id) { box.hidden = true; return; }
-      resendAt = Date.now() + 60000;
-      box.dataset.method = r.method;
-      box.innerHTML = r.method === "email"
-        ? `<div class="verify-t"><strong>عندك بيانات مسجلة عندنا</strong><span>أرسلنا رمز تحقق من ٤ أرقام إلى <bdi dir="ltr">${esc(r.hint)}</bdi>${r.demo ? ` <em class="mode-pill">وضع التجربة: ${esc(r.demo)}</em>` : ""}</span></div>
-           <div class="verify-row"><input class="input" id="vCode" inputmode="numeric" dir="ltr" maxlength="4" placeholder="••••" aria-label="رمز التحقق" autocomplete="one-time-code"><button class="btn btn-primary btn-sm" type="button" id="vGo">تحقق</button><button class="link-btn" type="button" id="vResend">إعادة الإرسال</button><button class="link-btn" type="button" id="vSkip">لا، أكمل بدونها</button></div>`
-        : `<div class="verify-t"><strong>عندك بيانات مسجلة عندنا</strong><span>اكتب جوالك المسجل (<bdi dir="ltr">${esc(r.hint)}</bdi>) لنعرض بياناتك</span></div>
-           <div class="verify-row"><input class="input" id="vPhone" inputmode="tel" dir="ltr" maxlength="10" placeholder="05xxxxxxxx" aria-label="الجوال المسجل"><button class="btn btn-primary btn-sm" type="button" id="vGo">تحقق</button><button class="link-btn" type="button" id="vSkip">لا، أكمل بدونها</button></div>`;
-      box.innerHTML += '<p class="hint err" id="vErr" hidden></p>';
-      box.hidden = false;
-      const inp = $("#vCode") || $("#vPhone");
-      inp.addEventListener("input", () => { inp.value = T.toEn(inp.value).replace(/\D/g, ""); if (inp.id === "vCode" && inp.value.length === 4) verifyLookup(); });
-      inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); verifyLookup(); } });
-      $("#vGo").onclick = verifyLookup;
-      $("#vSkip").onclick = () => { box.hidden = true; };
-      if ($("#vResend")) $("#vResend").onclick = () => { if (Date.now() < resendAt) { K.toast("انتظر دقيقة قبل إعادة الإرسال"); return; } startLookup(true); K.toast("أرسلنا رمزا جديدا"); };
-      setTimeout(() => inp.focus(), 50);
-    } catch (e) { box.hidden = true; }
-  }
-  async function verifyLookup() {
-    const id = $("#nationalId").value, c = $("#vCode"), ph = $("#vPhone"), er = $("#vErr");
-    const val = (c || ph).value;
-    if ((c && val.length !== 4) || (ph && val.length !== 10)) return;
-    $("#vGo").disabled = true;
-    try {
-      const r = await T.call("lookupVerify", c ? { nationalId: id, code: val } : { nationalId: id, phone: val });
+      if (!r.found || $("#nationalId").value !== id) return;
       const keep = { email: S.person.email };
       S.person = Object.assign({}, r.person, { nationalId: id });
       if (!S.person.email && keep.email) S.person.email = keep.email;
-      S.vtoken = r.vtoken;
+      S.vtoken = r.vtoken || "";
       saveDraft(); renderStep();
       topToast(`أهلا ${esc(String(r.person.name || "").split(" ")[0])}، رجّعنا لك بياناتك`, "عدّل أي شيء تغيّر، ونحدّثه في سجلك", 0, "user");
-    } catch (e) { er.hidden = false; er.style.color = "var(--danger)"; er.textContent = e.message; $("#vGo").disabled = false; }
+    } catch (e) { if (e && e.message) K.toast(e.message); }
   }
 
   // ——— العمر ———
@@ -206,12 +176,13 @@
     t.classList.remove("show"); void t.offsetWidth; t.classList.add("show");
     clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), ms || 5200);
   }
+  const natOf = (v) => (!v ? "" : v === "سعودي" ? "سعودي" : "غير سعودي");
   function readPerson() {
     const g = (id) => { const el = $("#" + id); return el ? el.value.trim() : ""; };
     const r = (n) => ($(`input[name="${n}"]:checked`) || {}).value || "";
     Object.assign(S.person, {
       nationalId: T.toEn(g("nationalId")), phone: T.toEn(g("phone")), email: g("email"), name: g("name").replace(/\s+/g, " "),
-      nationality: r("nationality"), nationalityName: r("nationality") === "غير سعودي" ? g("nationalityName") : "",
+      nationality: natOf(g("nationality")), nationalityName: natOf(g("nationality")) === "غير سعودي" ? g("nationality") : "",
       gender: r("gender"), birthDate: g("birthDate"), city: g("city"), district: g("district"),
       qualification: r("qualification"), major: g("major"), employer: g("employer"), jobTitle: g("jobTitle")
     });
@@ -234,13 +205,11 @@
     chk("phone", /^05\d{8}$/.test(p.phone), "رقم الجوال ١٠ أرقام ويبدأ بـ ٠٥");
     chk("email", /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(p.email), "اكتب بريدا صحيحا");
     chk("name", p.name.split(" ").filter(Boolean).length >= 3, "اكتب الاسم كاملا (ثلاثي على الأقل)");
-    chk("nationality", !!p.nationality, "اختر الجنسية");
-    if (p.nationality === "غير سعودي") chk("nationalityName", !!p.nationalityName, "اكتب جنسيتك");
+    chk("nationality", p.nationality === "سعودي" || T.NATIONALITIES.includes(p.nationalityName), "اختر الجنسية من القائمة");
     chk("gender", !!p.gender, "اختر الجنس");
     chk("birthDate", !!p.birthDate, "اختر تاريخ الميلاد");
     chk("city", !!p.city, "اكتب المدينة");
     chk("qualification", !!p.qualification, "اختر المؤهل");
-    if (S.mode === "edit" && needsEmployer()) chk("employer", !!p.employer, "اكتب جهة العمل، تظهر في وثيقة صاحب العمل");
     return bad;
   }
 
@@ -283,7 +252,9 @@
     const id = "q_" + q.id, v = S.answers[q.id], req = !!q.required;
     switch (q.type) {
       case "long": return field(id, esc(q.label), `<textarea class="textarea" id="${id}" name="${id}">${esc(v || "")}</textarea>`, req);
-      case "number": return field(id, esc(q.label), input(id, v, 'inputmode="numeric" dir="ltr"'), req);
+      case "number":
+        if (q.id === "q_hours") return field(id, esc(q.label), input(id, v, 'inputmode="numeric" dir="ltr" maxlength="1" placeholder="من ١ إلى ٨"'), req, `<span id="weeklyHint">${weeklyText()}</span>`);
+        return field(id, esc(q.label), input(id, v, 'inputmode="numeric" dir="ltr"'), req);
       case "date": return field(id, esc(q.label), input(id, v, 'type="date"'), req);
       case "choice": return segField(id, esc(q.label), q.options || [], v, req);
       case "multi": return segField(id, esc(q.label), q.options || [], v || [], req, true);
@@ -296,6 +267,13 @@
       }
       default: return field(id, esc(q.label), input(id, v), req);
     }
+  }
+  // الساعات اليومية × عدد الأيام المتاحة = الساعات الأسبوعية (تظهر فقط، ويُحفظ اليومي)
+  function weeklyText() {
+    const h = Number(T.toEn(S.answers.q_hours || "")), n = (S.answers.q_days || []).length;
+    if (!h || h > 8) return "الحد ٨ ساعات في اليوم";
+    if (!n) return "اختر الأيام المتاحة، ونحسب لك ساعاتك في الأسبوع";
+    return `يعني ${T.arCount(h * n, T.W_HOUR)} أسبوعيا`;
   }
   function detailsCard(p) {
     const d = [];
@@ -339,16 +317,18 @@
     (p.questions || []).forEach((q) => {
       const v = S.answers[q.id], id = "q_" + q.id;
       const empty = q.type === "file" ? !S.files[q.id] : Array.isArray(v) ? !v.length : !v;
-      const ok = !q.required || !empty;
-      err(id, ok ? "" : q.type === "file" ? "أرفق الملف" : "هذا الحقل مطلوب");
+      let ok = !q.required || !empty, msg = q.type === "file" ? "أرفق الملف" : "هذا الحقل مطلوب";
+      if (ok && q.id === "q_hours" && v) { const n = Number(T.toEn(v)); if (!(n >= 1 && n <= 8)) { ok = false; msg = "اكتب رقما من ١ إلى ٨ ساعات"; } }
+      err(id, ok ? "" : msg);
       if (!ok) bad.push(id);
     });
     return bad;
   }
 
   // ٤) الميثاق
-  function charterHtml(p) {
-    const map = T.placeholderMap(S.person, p, { regId: S.mode === "edit" ? S.regId : "يصدر بعد الإرسال" }, null);
+  function charterHtml(p) { return charterFor(S.person, p, S.mode === "edit" ? S.regId : "يصدر بعد الإرسال"); }
+  function charterFor(person, p, regId) {
+    const map = T.placeholderMap(person, p, { regId }, null);
     const raw = p.charterText || "";
     if (!raw.trim()) return `<h3>ميثاق التطوع — ${esc(p.name)}</h3><p>يلتزم المتطوع بأنظمة جمعية غراس لتنمية الطفل وقيمها، والمحافظة على سلامة الأطفال وخصوصيتهم، والحضور في المواعيد المحددة.</p>`;
     const lines = raw.split("\n");
@@ -366,7 +346,7 @@
   function stepCharter(eb, n, t) {
     const p = program(), emp = needsEmployer();
     return hero(n, t, eb, "ميثاق التطوع", "اقرأ الميثاق بعد ما تعبّى ببياناتك، ثم وقّع") + editNote() +
-      (emp ? `<div class="safety-note"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.5 4 5.5v6c0 5 3.4 9 8 10.5 4.6-1.5 8-5.5 8-10.5v-6l-8-3Z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg><span>هذا البرنامج يحتاج توقيع <strong style="font-weight:500">صاحب العمل</strong>. بعد ما ترسل، تنزّل الميثاق ويوقّعه صاحب العمل ويختمه، ثم ترفعه من صفحة المتابعة. الموقع يحفظ مكانك، فتقدر ترجع لها متى ما جهزت.</span></div>` : "") +
+      (emp ? `<div class="safety-note"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.5 4 5.5v6c0 5 3.4 9 8 10.5 4.6-1.5 8-5.5 8-10.5v-6l-8-3Z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg><span>هذا البرنامج يحتاج توقيع <strong style="font-weight:500">صاحب العمل</strong>. بعد ما ترسل، يوصله رابط على الواتساب، يفتحه ويقرأ الميثاق ويوقّع من جواله. نبلغك أول ما يوقّع.</span></div>` : "") +
       `<div class="card"><h2 class="card-title">نص الميثاق</h2>
         <div class="paper" id="paper" tabindex="0" aria-label="نص الميثاق"><img class="paper-logo" src="assets/logo.png" alt="">${charterHtml(p)}</div>
         <p class="read-more">الأجزاء المظللة أُخذت من بياناتك. الختم وتوقيع الجمعية ينضافون عند الاعتماد.</p>
@@ -375,17 +355,14 @@
         <label class="agree ${S.agreed ? "checked" : ""}" id="agreeBox"><input type="checkbox" id="agree" ${S.agreed ? "checked" : ""}><span class="box" aria-hidden="true">${ic.tick}</span><span>قرأت ميثاق التطوع، وأوافق على كل ما فيه، وأقرّ بصحة بياناتي.</span></label>
         <div class="sigpad" id="sigpad"></div>
         <p class="hint">التوقيع يُحفظ مع الميثاق، ويظهر في الوثيقة المعتمدة.</p>
-        ${S.mode === "edit" && emp ? `<div class="field"><span class="field-label">وثيقة صاحب العمل (اختياري إذا طُلب منك تحديثها)</span>
-          <label class="drop">${ic.up.replace("<svg", '<svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"')}<span>ارفع الوثيقة الموقعة من صاحب العمل</span><input type="file" hidden id="empEdit" accept="image/*,application/pdf"></label>
-          <ul class="files">${S.employerFile ? `<li><span class="fname">${esc(S.employerFile.name)}</span><button type="button" id="empEditRm" aria-label="حذف">×</button></li>` : ""}</ul></div>` : ""}
-      </div></div>`;
+      </div></div>` +
+      (emp ? `<div class="card"><h2 class="card-title">صاحب العمل</h2><div class="grid">${field("employerPhone", "جوال صاحب العمل", input("employerPhone", S.employerPhone, 'inputmode="tel" dir="ltr" maxlength="10" placeholder="05xxxxxxxx" autocomplete="off"'), true, "يوصله رابط على الواتساب يوقّع منه على الميثاق إلكترونيا.")}</div></div>` : "");
   }
   function mountCharter() {
     pad = SignPad($("#sigpad"));
     $("#agree").addEventListener("change", (e) => { S.agreed = e.target.checked; $("#agreeBox").classList.toggle("checked", S.agreed); $("#agreeBox").classList.remove("bad"); });
-    const ee = $("#empEdit");
-    if (ee) ee.addEventListener("change", async () => { const f = ee.files[0]; if (!f) return; try { S.employerFile = await T.packFile(f); renderStep(); } catch (x) { K.toast(x.message); } });
-    const rm = $("#empEditRm"); if (rm) rm.addEventListener("click", () => { S.employerFile = null; renderStep(); });
+    const ep = $("#employerPhone");
+    if (ep) ep.addEventListener("input", () => { ep.value = T.toEn(ep.value).replace(/\D/g, "").slice(0, 10); S.employerPhone = ep.value; err("employerPhone", ""); saveDraft(); });
   }
 
   // ——— التنقل ———
@@ -413,10 +390,6 @@
         S.programId = pid;
       }
       if (blocked(program())) { K.toast(blocked(program())); return; }
-      if (needsEmployer() && !S.person.employer) {
-        K.toast("هذا البرنامج يحتاج جهة عملك. اكتبها في بياناتك");
-        S.step = 0; renderStep(); err("employer", "اكتب جهة العمل، تظهر في وثيقة صاحب العمل"); $('[data-f="employer"]').scrollIntoView({ behavior: "smooth", block: "center" }); return;
-      }
     }
     if (key === "details") { const bad = validateDetails(); if (bad.length) return focusBad(bad); }
     if (key === "charter") return submit();
@@ -435,6 +408,8 @@
 
   async function submit() {
     if (!S.agreed) { $("#agreeBox").classList.add("bad"); $("#agreeBox").scrollIntoView({ behavior: "smooth", block: "center" }); K.toast("أكّد موافقتك على الميثاق"); return; }
+    if (needsEmployer() && !/^05\d{8}$/.test(S.employerPhone || "")) { err("employerPhone", "اكتب جوال صاحب العمل، ١٠ أرقام ويبدأ بـ ٠٥"); $('[data-f="employerPhone"]').scrollIntoView({ behavior: "smooth", block: "center" }); K.toast("اكتب جوال صاحب العمل"); return; }
+    if (needsEmployer() && S.employerPhone === S.person.phone) { err("employerPhone", "هذا جوالك أنت، اكتب جوال صاحب العمل"); $('[data-f="employerPhone"]').scrollIntoView({ behavior: "smooth", block: "center" }); return; }
     if (pad.isEmpty()) { $("#sigpad").classList.add("bad"); $("#sigpad").scrollIntoView({ behavior: "smooth", block: "center" }); K.toast("وقّع في الخانة"); return; }
     const sig = pad.toDataURL();
     $("#nextBtn").disabled = true;
@@ -442,9 +417,9 @@
     K.courier.creep(5, 88);
     try {
       let r;
-      const base = { person: S.person, answers: S.answers, files: S.files, signature: sig, vtoken: S.vtoken || "", siteUrl: location.origin + location.pathname };
+      const base = { person: S.person, answers: S.answers, files: S.files, signature: sig, vtoken: S.vtoken || "", siteUrl: location.origin + location.pathname, employerPhone: needsEmployer() ? S.employerPhone : "" };
       if (S.mode === "edit") {
-        r = await T.call("resubmit", Object.assign(base, { token: S.token, employerFile: S.employerFile }));
+        r = await T.call("resubmit", Object.assign(base, { token: S.token }));
         r.token = S.token; r.regId = S.regId;
       } else {
         r = await T.call("submit", Object.assign(base, { programId: S.programId }));
@@ -465,10 +440,12 @@
     const emp = r.status === S_.EMPLOYER;
     $("#doneKicker").textContent = wasEdit ? "وصل التعديل" : "وصل تسجيلك";
     $("#doneSub").textContent = emp
-      ? "باقي خطوة وحدة: نزّل الميثاق، ويوقّعه صاحب العمل ويختمه، ثم ارفعه. أرسلنا لك رابط المتابعة على بريدك."
+      ? (r.waSent === false
+        ? "باقي خطوة وحدة: توقيع صاحب العمل. ما قدرنا نرسل له الرابط الحين، افتح صفحة المتابعة وأعد الإرسال."
+        : "باقي خطوة وحدة: أرسلنا رابط التوقيع لصاحب العمل على الواتساب. أول ما يوقّع، يوصل طلبك للمشرف للاعتماد.")
       : "سيراجع فريق الجمعية تسجيلك، وتوصلك الوثيقة المعتمدة على بريدك. وأرسلنا لك رابط المتابعة.";
     $("#doneRef").innerHTML = `${esc(prog ? prog.name : "")} — رقم التسجيل: <bdi dir="ltr">${esc(r.regId)}</bdi>`;
-    $("#doneNext").textContent = emp ? "نزّل الميثاق لصاحب العمل" : "متابعة التسجيل";
+    $("#doneNext").textContent = "متابعة التسجيل";
     $("#doneNext").onclick = () => openStatus(r.token);
     show("screenDone");
   }
@@ -492,19 +469,16 @@
     $("#progressFill").style.width = pct + "%";
     const tl = [];
     tl.push(["done", "أرسلت التسجيل ووقّعت الميثاق", T.fmtDate(r.created)]);
-    if (r.employerRequired) tl.push([st === S_.EMPLOYER ? "now" : (st === S_.CHANGES ? "" : "done"), "توقيع صاحب العمل", st === S_.EMPLOYER ? "بانتظار رفع الوثيقة" : r.hasEmployer ? "تم الرفع" : ""]);
+    if (r.employerRequired) tl.push([st === S_.EMPLOYER ? "now" : (st === S_.CHANGES ? "" : "done"), "توقيع صاحب العمل", st === S_.EMPLOYER ? "بانتظار التوقيع" : r.hasEmployer ? "تم التوقيع" : ""]);
     if (st === S_.CHANGES) tl.push(["now", "مطلوب تعديل", "عدّل تسجيلك وأعد إرساله"]);
     tl.push([st === S_.APPROVED ? "done" : st === S_.PENDING ? "now" : st === S_.REJECTED ? "bad" : "", st === S_.REJECTED ? "لم يُعتمد التسجيل" : "اعتماد الجمعية", st === S_.PENDING ? "عند فريق الجمعية الحين" : st === S_.APPROVED ? T.fmtDate(r.approvedAt) : ""]);
     tl.push([st === S_.APPROVED ? "done" : "", "الوثيقة المعتمدة", st === S_.APPROVED ? "وصلت بريدك" : "توصلك على بريدك"]);
     const dot = (c, i) => (c === "done" ? ic.tick : c === "bad" ? "×" : toAr(i + 1));
     let action = "";
-    if (st === S_.EMPLOYER) action = `<div class="card"><h2 class="card-title">وثيقة صاحب العمل</h2><ol class="steps-mini">
-        <li><div><h4>نزّل الميثاق</h4><p>الميثاق فيه بياناتك وتوقيعك، وفيه خانة لصاحب العمل.</p><button class="btn btn-primary btn-icon" id="dlDraft" type="button">${ic.down}نزّل الميثاق (PDF)</button></div></li>
-        <li><div><h4>يوقّعه صاحب العمل ويختمه</h4><p>اطبعه وخذ توقيع صاحب العمل وختمه في الخانة المخصصة.</p></div></li>
-        <li><div><h4>ارفعه هنا</h4><p>صوّره بجوالك بوضوح أو ارفع ملف PDF. تقدر ترجع لهذه الصفحة في أي وقت.</p>
-          <label class="drop">${ic.up.replace("<svg", '<svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"')}<span>اضغط لاختيار الصورة أو الملف</span><input type="file" hidden id="empFile" accept="image/*,application/pdf"></label>
-          <ul class="files files-sel" id="empList"></ul>
-          <button class="btn btn-ok btn-icon" id="empSend" type="button" disabled style="margin-top:12px">${ic.up}أرسل الوثيقة</button></div></li></ol></div>`;
+    if (st === S_.EMPLOYER) action = `<div class="card"><h2 class="card-title">توقيع صاحب العمل</h2>
+        <p style="margin:0 0 14px;color:var(--ink-2)">${r.employerPhone ? `أرسلنا رابط التوقيع على الواتساب إلى <bdi dir="ltr">${esc(r.employerPhone)}</bdi>. يفتحه صاحب العمل ويقرأ الميثاق ويوقّع من جواله، وأول ما يوقّع يوصل طلبك للمشرف.` : "اكتب جوال صاحب العمل، ونرسل له رابط التوقيع على الواتساب."}</p>
+        <div class="row-actions">${r.employerPhone ? '<button class="btn btn-primary" type="button" id="empResend">إعادة إرسال الرابط</button>' : ""}<button class="btn btn-line" type="button" id="empChange">${r.employerPhone ? "تغيير رقم صاحب العمل" : "إضافة جوال صاحب العمل"}</button></div>
+        <div class="field" id="empNewBox" hidden style="margin-top:14px"><label for="empNew">جوال صاحب العمل الجديد</label><div class="verify-row"><input class="input" id="empNew" inputmode="tel" dir="ltr" maxlength="10" placeholder="05xxxxxxxx"><button class="btn btn-primary btn-sm" type="button" id="empNewGo">أرسل الرابط</button></div><p class="hint err" hidden id="empNewErr"></p></div></div>`;
     if (st === S_.PENDING) action = `<div class="card"><h2 class="card-title">تسجيلك عند فريق الجمعية</h2><p style="margin:0;color:var(--ink-2)">بعد الاعتماد تنضاف أختام الجمعية وتوقيعها، وتوصلك الوثيقة النهائية على <bdi dir="ltr">${esc(r.person.email)}</bdi>.</p></div>`;
     if (st === S_.CHANGES) action = `<div class="note-box"><strong>ملاحظة الجمعية</strong>${esc(r.note || "راجع بياناتك وأعد الإرسال")}</div><div class="card"><h2 class="card-title">عدّل تسجيلك</h2><p style="margin:0 0 16px;color:var(--ink-2)">نرجّعك لبياناتك كما أرسلتها، تعدّل اللي يلزم، وتوقّع من جديد.</p><button class="btn btn-primary btn-icon" id="editBtn" type="button">${ic.edit}ابدأ التعديل</button></div>`;
     if (st === S_.APPROVED) action = `<div class="card"><h2 class="card-title">مبروك، اعتُمد تسجيلك</h2><p style="margin:0 0 16px;color:var(--ink-2)">الوثيقة موقعة من جميع الأطراف، ووصلت بريدك. تقدر تنزّلها من هنا أيضا.</p><button class="btn btn-ok btn-icon" id="dlFinal" type="button">${ic.down}نزّل الوثيقة المعتمدة</button></div>`;
@@ -523,23 +497,75 @@
       try { const f = await T.call("doc", { token, which }); download(T.b64ToBlob(f.b64, f.mime), f.name); }
       catch (e) { K.toast(e.message); } finally { b.disabled = false; b.innerHTML = t; }
     };
-    if ($("#dlDraft")) $("#dlDraft").onclick = (e) => dl("draft", e.currentTarget);
     if ($("#dlFinal")) $("#dlFinal").onclick = (e) => dl("final", e.currentTarget);
     if ($("#editBtn")) $("#editBtn").onclick = () => startEdit(token, d);
-    if ($("#empFile")) {
-      let packed = null;
-      $("#empFile").onchange = async (e) => {
-        const f = e.target.files[0]; if (!f) return;
-        try { packed = await T.packFile(f); $("#empList").innerHTML = `<li><span class="fname">${esc(packed.name)}</span></li>`; $("#empSend").disabled = false; }
-        catch (x) { K.toast(x.message); }
-      };
-      $("#empSend").onclick = async () => {
-        if (!packed) return;
-        K.courier.start("جار رفع الوثيقة…"); K.courier.creep(5, 90);
-        try { await T.call("uploadEmployer", { token, file: packed }); await K.courier.finish("وصلت الوثيقة"); await K.courier.hide(); openStatus(token); }
-        catch (x) { await K.courier.hide(); K.toast(x.message, 4200); }
+    const resend = async (phone, b) => {
+      const t = b.textContent; b.disabled = true; b.textContent = "جار الإرسال…";
+      try {
+        const res = await T.call("resendEmployer", { token, phone: phone || "" });
+        if (res.waSent === false) K.toast("ما قدرنا نرسل الرسالة الحين، حاول بعد قليل", 4200);
+        else K.toast("أرسلنا رابط التوقيع لصاحب العمل على الواتساب", 3600);
+        if (res.demoLink) console.info("وضع التجربة: افتح هذا الرابط لتجربة توقيع صاحب العمل", location.pathname + res.demoLink);
+        if (phone) openStatus(token);
+      } catch (x) { K.toast(x.message, 4200); }
+      finally { b.disabled = false; b.textContent = t; }
+    };
+    if ($("#empResend")) $("#empResend").onclick = (e) => resend("", e.currentTarget);
+    if ($("#empChange")) $("#empChange").onclick = () => { $("#empNewBox").hidden = false; $("#empNew").focus(); };
+    if ($("#empNew")) {
+      $("#empNew").oninput = (e) => { e.target.value = T.toEn(e.target.value).replace(/\D/g, "").slice(0, 10); $("#empNewErr").hidden = true; };
+      $("#empNewGo").onclick = (e) => {
+        const v = $("#empNew").value, er = $("#empNewErr");
+        if (!/^05\d{8}$/.test(v)) { er.hidden = false; er.style.color = "var(--danger)"; er.textContent = "رقم الجوال ١٠ أرقام ويبدأ بـ ٠٥"; return; }
+        if (v === (r.person || {}).phone) { er.hidden = false; er.style.color = "var(--danger)"; er.textContent = "هذا جوالك أنت، اكتب جوال صاحب العمل"; return; }
+        resend(v, e.currentTarget);
       };
     }
+  }
+
+  // ===================== صفحة توقيع صاحب العمل (يفتحها من رابط الواتساب) =====================
+  async function openEmployer(etoken) {
+    show("screenStatus");
+    $("#topbarTitle").textContent = "توقيع صاحب العمل";
+    $("#progressFill").style.width = "0";
+    const host = $("#statusHost");
+    host.innerHTML = `<div class="wrap step"><div class="step-hero"><div><p class="eyebrow">توقيع صاحب العمل</p><h1>لحظة…</h1><p class="lead">نجهز لك الميثاق</p></div></div></div>`;
+    let d;
+    try { d = await T.call("employerView", { etoken }); }
+    catch (e) {
+      host.innerHTML = `<div class="wrap step"><div class="step-hero"><div><p class="eyebrow">توقيع صاحب العمل</p><h1>ما قدرنا نفتح الرابط</h1><p class="lead">${esc(e.message)}</p></div></div></div>`;
+      return;
+    }
+    const p = d.program || {};
+    if (d.signed) {
+      host.innerHTML = `<div class="wrap step"><div class="step-hero"><div><p class="eyebrow">توقيع صاحب العمل</p><h1>شكرا لك</h1><p class="lead">سبق توقيعك على ميثاق ${esc(d.volunteer)} في ${esc(p.name || "")}. ما يحتاج منك شيء ثاني.</p></div></div></div>`;
+      $("#progressFill").style.width = "100%"; return;
+    }
+    host.innerHTML = `<div class="wrap step">
+      <div class="step-hero"><div><p class="eyebrow">توقيع صاحب العمل</p><h1>ميثاق التطوع</h1><p class="lead">السلام عليكم، طلب منك <strong style="font-weight:500">${esc(d.volunteer)}</strong> التوقيع على ميثاق التطوع في <strong style="font-weight:500">${esc(p.name || "")}</strong> لدى جمعية غراس لتنمية الطفل.</p></div></div>
+      <div class="band" aria-hidden="true"></div>
+      <div class="card"><h2 class="card-title">نص الميثاق</h2>
+        <div class="paper" tabindex="0" aria-label="نص الميثاق"><img class="paper-logo" src="assets/logo.png" alt="">${charterFor(d.person || {}, p, d.regId)}</div>
+        <p class="read-more">الأجزاء المظللة بيانات المتطوع كما أدخلها.</p></div>
+      <div class="card"><h2 class="card-title">توقيعك</h2><div class="grid">
+        <label class="agree" id="eAgreeBox"><input type="checkbox" id="eAgree"><span class="box" aria-hidden="true">${ic.tick}</span><span>اطلعت على الميثاق، وأوافق على تطوع ${esc(d.volunteer)} في هذا البرنامج.</span></label>
+        <div class="sigpad" id="eSig"></div>
+        <button class="btn btn-ok" type="button" id="eGo">أوقّع وأوافق</button>
+      </div></div></div>`;
+    const epad = SignPad($("#eSig"));
+    $("#eAgree").onchange = (e) => { $("#eAgreeBox").classList.toggle("checked", e.target.checked); $("#eAgreeBox").classList.remove("bad"); };
+    $("#eGo").onclick = async (e) => {
+      if (!$("#eAgree").checked) { $("#eAgreeBox").classList.add("bad"); K.toast("أكّد موافقتك"); return; }
+      if (epad.isEmpty()) { $("#eSig").classList.add("bad"); K.toast("وقّع في الخانة"); return; }
+      e.currentTarget.disabled = true;
+      K.courier.start("جار إرسال توقيعك…"); K.courier.creep(5, 90);
+      try {
+        await T.call("employerSign", { etoken, signature: epad.toDataURL() });
+        await K.courier.finish("وصل توقيعك"); await K.courier.hide();
+        host.innerHTML = `<div class="wrap step"><div class="step-hero"><div><p class="eyebrow">توقيع صاحب العمل</p><h1>شكرا لك</h1><p class="lead">وصل توقيعك، وانتقل طلب ${esc(d.volunteer)} للمشرف للاعتماد. ما يحتاج منك شيء ثاني.</p></div></div></div>`;
+        $("#progressFill").style.width = "100%"; window.scrollTo(0, 0);
+      } catch (x) { await K.courier.hide(); K.toast(x.message, 4200); $("#eGo").disabled = false; }
+    };
   }
   function download(blob, name) {
     const u = URL.createObjectURL(blob), a = document.createElement("a");
@@ -571,7 +597,7 @@
   async function startEdit(token, d) {
     try { await loadPrograms(); } catch (e) { K.toast(e.message); return; }
     S = blank();
-    Object.assign(S, { mode: "edit", token, regId: d.reg.regId, person: Object.assign({}, d.reg.person), programId: d.reg.programId, answers: Object.assign({}, d.reg.answers || {}), note: d.reg.note });
+    Object.assign(S, { mode: "edit", token, regId: d.reg.regId, employerPhone: d.reg.employerPhoneFull || "", person: Object.assign({}, d.reg.person), programId: d.reg.programId, answers: Object.assign({}, d.reg.answers || {}), note: d.reg.note });
     if (!program()) programs.push(d.program);
     S.kind = program().kind === "general" ? "general" : "program";
     show("screenSteps"); renderStep();
@@ -604,10 +630,13 @@
     const key = steps()[S.step], t = e.target;
     if (key === "person") {
       if (t.id === "nationalId" || t.id === "phone") t.value = T.toEn(t.value).replace(/\D/g, "").slice(0, 10);
-      if (t.id === "nationalId") { if (S.vtoken && t.value !== S.person.nationalId) S.vtoken = ""; if (t.value.length === 10) startLookup(); else $("#verifyBox").hidden = true; }
+      if (t.id === "nationalId") { if (S.vtoken && t.value !== S.person.nationalId) S.vtoken = ""; if (t.value.length === 10) startLookup(); }
       if (t.id === "birthDate") updateAge(false);
       readPerson(); saveDraft();
-    } else if (key === "details") { readAnswers(); saveDraft(); }
+    } else if (key === "details") {
+      if (t.id === "q_q_hours") t.value = T.toEn(t.value).replace(/\D/g, "").slice(0, 1);
+      readAnswers(); saveDraft(); const wh = $("#weeklyHint"); if (wh) wh.textContent = weeklyText();
+    }
   });
   stepHost.addEventListener("change", async (e) => {
     const key = steps()[S.step], f = e.target;
@@ -627,6 +656,7 @@
       return;
     }
     readAnswers(); saveDraft();
+    const wh = $("#weeklyHint"); if (wh) wh.textContent = weeklyText();
   });
   stepHost.addEventListener("click", (e) => {
     const b = e.target.closest("[data-rmq]");
@@ -658,7 +688,9 @@
   // أول فتح: رابط المتابعة ← مسودة ← تسجيل ينتظر إجراء ← الرئيسية
   fetchConfig().catch(() => {});
   const hashT = (location.hash.match(/[#&]t=([A-Za-z0-9]+)/) || [])[1];
-  if (hashT) { history.replaceState(null, "", location.pathname); openStatus(hashT); }
+  const hashE = (location.hash.match(/[#&]e=([A-Za-z0-9]+)/) || [])[1];
+  if (hashE) { history.replaceState(null, "", location.pathname); $("#homeLink").style.pointerEvents = "none"; openEmployer(hashE); }
+  else if (hashT) { history.replaceState(null, "", location.pathname); openStatus(hashT); }
   else if (!resumeDraft()) {
     const waiting = localRegs().find((r) => r.status === S_.EMPLOYER || r.status === S_.CHANGES);
     if (waiting) openStatus(waiting.token); else goHome();
