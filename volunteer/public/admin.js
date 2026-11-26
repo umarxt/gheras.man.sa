@@ -466,7 +466,7 @@
     $("#view").innerHTML = `<div class="wrap step">${hero("لوحة الإدارة", "المتطوعون", "سجل المتطوعين، ورفعه وتصديره بملف Excel", vols.length)}
       <div class="xl-grid">
         <div class="card xl-card"><h2 class="card-title">رفع بيانات المتطوعين</h2>
-          <ol class="xl-steps"><li>نزّل النموذج وعبّه، كل متطوع في صف.</li><li>ارفعه هنا، ونوريك ملخصا قبل الحفظ.</li><li>إذا كتب المتطوع هويته في التسجيل، يوصله رمز على بريده وتطلع بياناته كاملة.</li></ol>
+          <ol class="xl-steps"><li>نزّل النموذج وعبّه، كل متطوع في صف.</li><li>ارفعه هنا، ونوريك ملخصا قبل الحفظ.</li><li>إذا كتب المتطوع هويته في التسجيل، تطلع بياناته كاملة تلقائيا.</li></ol>
           <div class="row-actions"><button class="btn btn-line btn-icon" type="button" id="xlTpl">${ic.down}تنزيل النموذج</button><label class="btn btn-primary btn-icon">${ic.plus}رفع ملف Excel<input type="file" id="xlIn" hidden accept=".xlsx,.xls,.csv"></label></div></div>
         <div class="card xl-card"><h2 class="card-title">التصدير</h2>
           <p class="hint" style="margin:-8px 0 14px">ملف Excel لكل المتطوعين، أو ملف بقالب منصة التطوع للتسجيلات المعتمدة.</p>
@@ -475,7 +475,7 @@
       </div>
       <div class="filters" style="grid-template-columns:1fr"><input class="input" id="vq" type="search" placeholder="ابحث بالاسم أو رقم الهوية أو الجوال" value="${esc(vq)}" aria-label="بحث"></div>
       <div class="reg-list" id="volList"></div></div>`;
-    drawVols();
+    drawVols(); bindSwipe($("#volList"));
     $("#vq").addEventListener("input", (e) => { vq = e.target.value; drawVols(); });
     $("#xlTpl").onclick = downloadTemplate;
     $("#xlAll").onclick = exportAll;
@@ -490,12 +490,54 @@
   function drawVols() {
     const q = T.toEn(vq.trim()).toLowerCase();
     const list = (V.volunteers || []).filter((v) => !q || [v.name, v.nationalId, v.phone].some((x) => String(x || "").toLowerCase().includes(q)));
-    $("#volList").innerHTML = list.length ? list.slice(0, 300).map((v) => { const st = volStats(v.nationalId); return `<div class="reg-row" style="cursor:default">
+    $("#volList").innerHTML = list.length ? list.slice(0, 300).map((v) => { const st = volStats(v.nationalId); return `<div class="swipe" data-vid="${esc(v.nationalId)}"><div class="swipe-bg" aria-hidden="true">${ic.trash}<span>حذف</span></div><div class="reg-row swipe-row">
         <span><span class="nm">${esc(v.name)}</span><small><bdi dir="ltr">${esc(v.nationalId)}</bdi> — ${esc(T.nationalityText(v))}</small></span>
         <span class="pg"><bdi dir="ltr">${esc(v.phone || "—")}</bdi><small>${esc(v.email || "بلا بريد")}</small></span>
         <span class="dt"><small>${st.count ? `${toAr(st.count)} تسجيل${st.hours ? " — " + toAr(st.hours) + " ساعة معتمدة" : ""}` : "لم يسجل بعد"}</small></span>
-        <span class="chip">${v.source === "ملف" ? "من الملف" : "سجّل بنفسه"}</span></div>`; }).join("") + (list.length > 300 ? `<p class="empty">يظهر أول ٣٠٠، استخدم البحث</p>` : "")
+        <span class="chip">${v.source === "ملف" ? "من الملف" : "سجّل بنفسه"}</span></div></div>`; }).join("") + (list.length > 300 ? `<p class="empty">يظهر أول ٣٠٠، استخدم البحث</p>` : "")
       : `<p class="empty">${(V.volunteers || []).length ? "لا نتائج مطابقة" : "لا يوجد متطوعون بعد. ارفع ملف Excel أو انتظر أول تسجيل"}</p>`;
+  }
+  // سحب صف المتطوع لليمين سحبة قوية ← رسالة تأكيد الحذف
+  function bindSwipe(host) {
+    let row = null, wrap = null, x0 = 0, y0 = 0, dx = 0, on = false, horiz = null;
+    const reset = (r) => { r.style.transition = "transform .25s ease"; r.style.transform = ""; r.parentElement.classList.remove("armed"); };
+    host.addEventListener("pointerdown", (e) => {
+      const r = e.target.closest(".swipe-row"); if (!r || e.button > 0) return;
+      row = r; wrap = r.parentElement; x0 = e.clientX; y0 = e.clientY; dx = 0; on = true; horiz = null;
+      row.style.transition = "none";
+    });
+    host.addEventListener("pointermove", (e) => {
+      if (!on || !row) return;
+      const mx = e.clientX - x0, my = e.clientY - y0;
+      if (horiz === null && (Math.abs(mx) > 8 || Math.abs(my) > 8)) { horiz = Math.abs(mx) > Math.abs(my); if (horiz) row.setPointerCapture(e.pointerId); }
+      if (!horiz) return;
+      e.preventDefault();
+      dx = Math.max(0, mx);
+      row.style.transform = `translateX(${dx}px)`;
+      wrap.classList.toggle("armed", dx > row.offsetWidth * 0.4);
+    });
+    const end = () => {
+      if (!on || !row) return;
+      on = false;
+      const r = row, w = wrap, strong = horiz && dx > r.offsetWidth * 0.4;
+      reset(r);
+      if (strong) confirmDelete(w.dataset.vid);
+      row = wrap = null;
+    };
+    host.addEventListener("pointerup", end);
+    host.addEventListener("pointercancel", end);
+  }
+  function confirmDelete(id) {
+    const v = (V.volunteers || []).find((x) => x.nationalId === id); if (!v) return;
+    const st = volStats(id);
+    modal("حذف المتطوع", `<p style="margin:0 0 10px;font-size:17px">هل تريد حذف المتطوع <strong style="font-weight:500">${esc(v.name)}</strong>؟</p>
+      <p class="hint" style="margin:0">رقم الهوية <bdi dir="ltr">${esc(v.nationalId)}</bdi>. يُحذف من سجل المتطوعين فقط${st.count ? `، وتبقى تسجيلاته (${toAr(st.count)}) وعقوده المعتمدة محفوظة` : ""}.</p>`,
+      `<button class="btn btn-primary" type="button" data-close>العودة بدون حذف</button><span class="grow"></span><button class="btn btn-danger" type="button" id="delGo">حذف</button>`);
+    $("#delGo").onclick = async (e) => {
+      e.target.disabled = true; e.target.textContent = "جار الحذف…";
+      try { await call("deleteVolunteer", { nationalId: id }); V.volunteers = V.volunteers.filter((x) => x.nationalId !== id); closeModal(); drawVols(); K.toast("حُذف " + v.name); }
+      catch (x) { K.toast(x.message); e.target.disabled = false; e.target.textContent = "حذف"; }
+    };
   }
   function saveBook(XLSX, sheets, name) {
     const wb = XLSX.utils.book_new();
@@ -519,7 +561,7 @@
     const ex = ["1012345678", "مثال: محمد عبدالله سعد الغامدي", "سعودي", "ذكر", "1995-04-21", "0551234567", "name@example.com", "الرياض", "السويدي", "بكالوريوس", "تربية خاصة", "", ""];
     saveBook(XLSX, [
       ["المتطوعون", [head, ex], [16, 30, 12, 8, 14, 13, 26, 12, 12, 14, 16, 18, 16]],
-      ["التعليمات", [["التعليمات"], ["امسح صف المثال، واكتب كل متطوع في صف."], ["رقم الهوية أو الإقامة والاسم إلزاميان، والباقي اختياري."], ["الجنسية: سعودي، أو اسم الجنسية مثل مصري."], ["الجنس: ذكر أو أنثى."], ["تاريخ الميلاد: 1995-04-21 أو 21/04/1995."], ["الجوال: 05xxxxxxxx."], ["البريد يلزم ليصل المتطوع رمز التحقق، وبدونه يتحقق بجواله."], ["إذا كان رقم الهوية موجودا من قبل، تتحدث بياناته بالقيم غير الفارغة."]], [70]]
+      ["التعليمات", [["التعليمات"], ["امسح صف المثال، واكتب كل متطوع في صف."], ["رقم الهوية أو الإقامة والاسم إلزاميان، والباقي اختياري."], ["الجنسية: سعودي، أو اسم الجنسية مثل مصري."], ["الجنس: ذكر أو أنثى."], ["تاريخ الميلاد: 1995-04-21 أو 21/04/1995."], ["الجوال: 05xxxxxxxx."], ["البريد اختياري، وتصل عليه الوثيقة ورابط المتابعة."], ["إذا كان رقم الهوية موجودا من قبل، تتحدث بياناته بالقيم غير الفارغة."]], [70]]
     ], "نموذج بيانات المتطوعين.xlsx");
   }
   async function exportAll() {

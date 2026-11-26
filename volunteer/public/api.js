@@ -593,6 +593,7 @@
           const regs = d.regs.map((r) => { const p = progOf(d, r.programId); return { regId: r.regId, nationalId: r.person.nationalId, programName: r.programName, status: r.status, hours: p.hours || "", startDate: p.startDate || "", endDate: p.endDate || "", created: r.created, approvedAt: r.approvedAt, person: r.person }; });
           return { ok: true, volunteers: vols, regs };
         }
+        case "deleteVolunteer": { admin(d, x); if (!d.volunteers[x.nationalId]) fail("المتطوع غير موجود"); delete d.volunteers[x.nationalId]; save(d); return { ok: true }; }
         case "importVolunteers": {
           admin(d, x);
           let added = 0, updated = 0;

@@ -188,12 +188,12 @@ const ROUTES = {
   checkSupervisor: apiCheckSupervisor, approve: apiApprove, requestChanges: apiRequestChanges, reject: apiReject,
   saveProgram: apiSaveProgram, previewTemplate: apiPreviewTemplate, saveSupervisor: apiSaveSupervisor,
   removeSupervisor: apiRemoveSupervisor, saveSettings: apiSaveSettings,
-  adminVolunteers: apiAdminVolunteers, importVolunteers: apiImportVolunteers
+  adminVolunteers: apiAdminVolunteers, importVolunteers: apiImportVolunteers, deleteVolunteer: apiDeleteVolunteer
 };
 // موظف منصة التطوع: رمز مستقل يفتح بيانات المنصة فقط
 const UPLOADER_ACTIONS = ['adminLogin', 'platformLoad'];
 const ADMIN_ACTIONS = ['testWhatsapp', 'adminLoad', 'regDetail', 'adminFile', 'checkSupervisor', 'approve', 'requestChanges',
-  'reject', 'saveProgram', 'previewTemplate', 'saveSupervisor', 'removeSupervisor', 'saveSettings', 'adminVolunteers', 'importVolunteers'];
+  'reject', 'saveProgram', 'previewTemplate', 'saveSupervisor', 'removeSupervisor', 'saveSettings', 'adminVolunteers', 'importVolunteers', 'deleteVolunteer'];
 
 // ===================== واجهة المتطوع =====================
 // قائمة البرامج المفتوحة: تُحفظ في الذاكرة المؤقتة دقيقتين لأن كل زائر يطلبها
@@ -725,6 +725,18 @@ function apiAdminVolunteers() {
   return { volunteers: vols, regs: regs };
 }
 
+// حذف متطوع من ورقة «المتطوعون» فقط (تسجيلاته وعقوده تبقى)
+function apiDeleteVolunteer(p) {
+  const id = digits(p.nationalId);
+  const lock = LockService.getScriptLock(); lock.waitLock(30000);
+  try {
+    const t = table('volunteers'), o = t.find('nationalId', id);
+    if (!o) fail('المتطوع غير موجود');
+    t.del(o);
+  } finally { lock.releaseLock(); }
+  return {};
+}
+
 // رفع بيانات المتطوعين من ملف Excel (يُقرأ في المتصفح ويصل هنا صفوفا)
 function apiImportVolunteers(p) {
   const rows = (p.rows || []).slice(0, 5000);
@@ -1072,6 +1084,7 @@ function table(key) {
       o._row = r; return o;
     },
     put: function (o) { sh.getRange(o._row, 1, 1, n).setValues([def.cols.map(function (c) { return clip(o[c[0]]); })]); },
+    del: function (o) { sh.deleteRow(o._row); },
     // تحديث صفوف موجودة وإضافة صفوف جديدة بكتابة واحدة
     bulk: function (changed, added) {
       const toRow = function (o) { return def.cols.map(function (c) { return clip(o[c[0]]); }); };

@@ -472,3 +472,16 @@ body.stage-mode .mode-pill { color: rgba(255, 255, 255, .8); }
 .cp-v.cp-none { color: var(--danger); font-size: 14px; }
 .cp-btn { justify-self: end; }
 @media (max-width: 560px) { .cp-row { grid-template-columns: 1fr 40px; } .cp-k { grid-column: 1 / -1; padding: 0; } }
+
+/* ——— سحب صف المتطوع للحذف ——— */
+.swipe { position: relative; border-radius: var(--radius-md, 16px); overflow: hidden; }
+.swipe-bg { position: absolute; inset: 0; display: flex; align-items: center; gap: 8px; padding-inline-end: 22px; justify-content: flex-end; background: var(--danger-bg); color: var(--danger); font-size: 15px; transition: background .2s; }
+.swipe-bg svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.swipe.armed .swipe-bg { background: var(--danger); color: #fff; }
+.swipe-row { position: relative; cursor: grab; touch-action: pan-y; user-select: none; }
+
+/* شريط التبويبات في الجوال يتمرر داخله بدل ما يوسّع الصفحة */
+.step-hero > div:first-child { min-width: 0; }
+.admin-tabs-m { max-width: 100%; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.admin-tabs-m::-webkit-scrollbar { display: none; }
+.admin-tabs-m button { flex-shrink: 0; }
