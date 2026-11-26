@@ -685,15 +685,13 @@
     catch (x) { m.style.color = ""; m.textContent = x.message; }
   });
 
-  // أول فتح: رابط المتابعة ← مسودة ← تسجيل ينتظر إجراء ← الرئيسية
+  // أول فتح: الروابط المرسلة (المتابعة، توقيع صاحب العمل) تفتح صفحتها، وغيرها يفتح الرئيسية دائما.
+  // المسودة لا تُفتح إلا بزر «أكمل تسجيلك»، والتسجيلات السابقة من «تسجيلاتك في هذا الجهاز».
   fetchConfig().catch(() => {});
   const hashT = (location.hash.match(/[#&]t=([A-Za-z0-9]+)/) || [])[1];
   const hashE = (location.hash.match(/[#&]e=([A-Za-z0-9]+)/) || [])[1];
   if (hashE) { history.replaceState(null, "", location.pathname); $("#homeLink").style.pointerEvents = "none"; openEmployer(hashE); }
   else if (hashT) { history.replaceState(null, "", location.pathname); openStatus(hashT); }
-  else if (!resumeDraft()) {
-    const waiting = localRegs().find((r) => r.status === S_.EMPLOYER || r.status === S_.CHANGES);
-    if (waiting) openStatus(waiting.token); else goHome();
-  }
+  else goHome();
   if (!T.LIVE) console.info("تطوع غراس: وضع التجربة (بلا خادم)");
 })();
